@@ -1,0 +1,117 @@
+<Window xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:controls="clr-namespace:Mythlix.Desktop.Controls" x:Class="Mythlix.Desktop.Views.MainWindow" Title="Mythlix — Editor PDF" Width="1500" Height="1000" MinWidth="1080" MinHeight="720" Background="#121316" FontSize="13">
+ <Window.Styles>
+  <Style Selector="Button"><Setter Property="Background" Value="Transparent"/><Setter Property="BorderThickness" Value="0"/><Setter Property="Margin" Value="2"/><Setter Property="Padding" Value="10,6"/><Setter Property="CornerRadius" Value="3"/><Setter Property="MinHeight" Value="30"/><Setter Property="Foreground" Value="#C7C4D8"/></Style>
+  <Style Selector="Button:pointerover"><Setter Property="Background" Value="#292A2D"/></Style>
+  <Style Selector="Button.primary"><Setter Property="Background" Value="#4F46E5"/><Setter Property="Foreground" Value="White"/></Style>
+  <Style Selector="Button.utility"><Setter Property="Background" Value="#24262B"/><Setter Property="BorderThickness" Value="1"/><Setter Property="BorderBrush" Value="#343538"/></Style>
+  <Style Selector="TextBlock"><Setter Property="Foreground" Value="#E3E2E6"/></Style>
+  <Style Selector="TextBlock.caption"><Setter Property="Foreground" Value="#918FA1"/><Setter Property="FontSize" Value="11"/></Style>
+  <Style Selector="TextBox"><Setter Property="FontSize" Value="12"/><Setter Property="Background" Value="#16171A"/><Setter Property="BorderBrush" Value="#343538"/><Setter Property="CornerRadius" Value="3"/></Style>
+  <Style Selector="NumericUpDown"><Setter Property="FontSize" Value="12"/><Setter Property="Background" Value="#16171A"/><Setter Property="BorderBrush" Value="#343538"/></Style>
+  <Style Selector="ListBox"><Setter Property="Background" Value="Transparent"/><Setter Property="BorderThickness" Value="0"/></Style>
+  <Style Selector="ListBoxItem"><Setter Property="Padding" Value="6"/><Setter Property="Margin" Value="0,2"/><Setter Property="CornerRadius" Value="4"/></Style>
+  <Style Selector="ListBoxItem:selected"><Setter Property="Background" Value="#254F46E5"/></Style>
+  <Style Selector="ListBoxItem:selected Border.thumbnail"><Setter Property="BorderBrush" Value="#4F46E5"/><Setter Property="BorderThickness" Value="2"/></Style>
+  <Style Selector="Border.section"><Setter Property="BorderBrush" Value="#292A2D"/><Setter Property="BorderThickness" Value="0,0,0,1"/><Setter Property="Padding" Value="12,14"/></Style>
+ </Window.Styles>
+ <Grid RowDefinitions="40,32,48,*,30">
+  <Grid ColumnDefinitions="210,*,Auto" Background="#0D0E11">
+   <StackPanel Orientation="Horizontal" Margin="12,0" VerticalAlignment="Center" Spacing="8"><Border Background="#4F46E5" CornerRadius="3" Padding="6,3"><TextBlock Text="M" FontWeight="Bold"/></Border><TextBlock Text="Mythlix" FontSize="16" FontWeight="SemiBold"/><TextBlock Text="— Editor" Foreground="#918FA1"/></StackPanel>
+   <Menu Grid.Column="1" Background="Transparent" VerticalAlignment="Center" IsEnabled="{Binding !Busy}">
+    <MenuItem Header="Archivo"><MenuItem Header="Abrir PDF…" Click="OpenClick"/><MenuItem Header="Guardar copia…" Click="SaveClick"/><MenuItem Header="Cerrar documento" Click="CloseClick"/></MenuItem>
+    <MenuItem Header="Editar"><MenuItem Header="Seleccionar texto original" Click="OriginalModeClick"/><MenuItem Header="Deshacer" Click="UndoClick"/><MenuItem Header="Rehacer" Click="RedoClick"/></MenuItem>
+    <MenuItem Header="Insertar"><MenuItem Header="Texto nuevo" Command="{Binding AddTextCommand}"/><MenuItem Header="Imagen…" Click="InsertImageClick"/><MenuItem Header="Rectángulo" Command="{Binding AddRectangleCommand}"/><MenuItem Header="Elipse" Command="{Binding AddEllipseCommand}"/><MenuItem Header="Línea" Command="{Binding AddLineCommand}"/></MenuItem>
+    <MenuItem Header="Organizar"><MenuItem Header="Duplicar página" Click="DuplicatePageClick"/><MenuItem Header="Mover página hacia atrás" Click="MoveBeforeClick"/><MenuItem Header="Mover página hacia delante" Click="MoveAfterClick"/><MenuItem Header="Insertar PDF después de la página actual…" Click="InsertPdfClick"/><MenuItem Header="Extraer páginas a otro PDF…" Click="ExtractPagesClick"/><MenuItem Header="Rotar página" Click="RotateClick"/><MenuItem Header="Añadir página en blanco" Click="AddClick"/><MenuItem Header="Eliminar página…" Click="DeleteClick"/></MenuItem>
+    <MenuItem Header="OCR"><MenuItem Header="Reconocimiento local…" Click="OcrClick"/></MenuItem>
+   </Menu>
+   <TextBlock Grid.Column="2" Text="LOCAL · PDF STUDIO" Classes="caption" VerticalAlignment="Center" Margin="12,0"/>
+  </Grid>
+  <Border Grid.Row="1" BorderBrush="#292A2D" BorderThickness="0,0,0,1" Background="#121316"><ListBox IsEnabled="{Binding !Busy}" x:Name="DocumentTabs" ItemsSource="{Binding Documents}" SelectedItem="{Binding Selected}" SelectionChanged="TabChanged">
+   <ListBox.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate></ListBox.ItemsPanel>
+   <ListBox.ItemTemplate><DataTemplate><StackPanel Orientation="Horizontal" Spacing="8"><TextBlock Text="●" Foreground="#7BD0FF" FontSize="10" VerticalAlignment="Center"/><TextBlock Text="{Binding Name}" FontSize="12"/><TextBlock Text="•" Foreground="#C3C0FF" IsVisible="{Binding Modified}"/></StackPanel></DataTemplate></ListBox.ItemTemplate>
+  </ListBox></Border>
+  <Grid Grid.Row="2" ColumnDefinitions="*,Auto" Background="#1B1B1F">
+   <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled"><StackPanel Orientation="Horizontal" VerticalAlignment="Center" IsEnabled="{Binding !Busy}" Margin="8,0">
+    <Button Content="↖" Classes="primary" Click="SelectModeClick" ToolTip.Tip="Seleccionar elementos" FontSize="20"/>
+    <Button Content="T  Original" Click="OriginalModeClick" ToolTip.Tip="Seleccionar un bloque de texto original compatible"/>
+    <Border Width="1" Background="#464555" Margin="8"/>
+    <Button Content="T+" Command="{Binding AddTextCommand}" FontSize="18" ToolTip.Tip="Insertar texto nuevo"/>
+    <Button Content="▧" Click="InsertImageClick" FontSize="20" ToolTip.Tip="Insertar imagen"/>
+    <Button Content="□" Command="{Binding AddRectangleCommand}" FontSize="20" ToolTip.Tip="Rectángulo"/><Button Content="◯" Command="{Binding AddEllipseCommand}" FontSize="20" ToolTip.Tip="Elipse"/><Button Content="╱" Command="{Binding AddLineCommand}" FontSize="20" ToolTip.Tip="Línea"/>
+    <Border Width="1" Background="#464555" Margin="8"/><TextBlock Text="{Binding SelectionLabel}" Classes="caption" VerticalAlignment="Center" Margin="8,0"/>
+   </StackPanel></ScrollViewer>
+   <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" IsEnabled="{Binding !Busy}" Margin="8,0"><Button Content="↶" Click="UndoClick" FontSize="20" ToolTip.Tip="Deshacer"/><Button Content="↷" Click="RedoClick" FontSize="20" ToolTip.Tip="Rehacer"/><Border Width="1" Background="#464555" Margin="8"/><Button Content="▣  Guardar copia" Click="SaveClick" Classes="utility"/></StackPanel>
+  </Grid>
+  <Grid Grid.Row="3" ColumnDefinitions="260,3,*,3,310">
+   <Grid Background="#1B1B1F" RowDefinitions="44,*,Auto">
+    <Border BorderBrush="#292A2D" BorderThickness="0,1,0,1" Padding="12"><Grid ColumnDefinitions="*,Auto"><TextBlock Text="▤  PÁGINAS" FontSize="12" FontWeight="SemiBold"/><TextBlock Grid.Column="1" Text="{Binding PageCountLabel}" Classes="caption"/></Grid></Border>
+    <ListBox Grid.Row="1" x:Name="ThumbnailList" SelectedItem="{Binding ActiveThumbnail, Mode=OneWay}" ItemsSource="{Binding PageThumbnails}" SelectionChanged="ThumbnailChanged" IsEnabled="{Binding !Busy}">
+     <ListBox.ItemTemplate><DataTemplate><StackPanel Spacing="6"><Border Classes="thumbnail" Background="#292A2D" BorderBrush="#464555" BorderThickness="1" CornerRadius="3" Padding="8" Height="184"><Grid><Image Source="{Binding Image}" Stretch="Uniform"/><TextBlock Text="{Binding Number}" IsVisible="{Binding !HasImage}" Classes="caption" VerticalAlignment="Center" HorizontalAlignment="Center"/></Grid></Border><TextBlock Text="{Binding Label}" FontSize="11" Margin="3,0"/></StackPanel></DataTemplate></ListBox.ItemTemplate>
+    </ListBox>
+    <Border Grid.Row="2" BorderBrush="#292A2D" BorderThickness="0,1,0,0" Padding="10"><StackPanel Spacing="6"><TextBox Text="{Binding Query}" PlaceholderText="Buscar en el documento…"/><Button Content="⌕  Buscar siguiente" Click="SearchClick" HorizontalAlignment="Stretch" Classes="utility"/></StackPanel></Border>
+   </Grid>
+   <GridSplitter Grid.Column="1" ResizeDirection="Columns" Background="#292A2D"/>
+   <Grid Grid.Column="2" x:Name="Viewport">
+    <controls:WorkspaceBackdrop IsHitTestVisible="False"/>
+    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"><Grid Margin="34,40">
+     <controls:PageCanvas x:Name="PdfCanvas" IsVisible="{Binding !IsEmpty}" Workspace="{Binding}" Width="{Binding DisplayWidth}" Height="{Binding DisplayHeight}" VerticalAlignment="Top" HorizontalAlignment="Center"/>
+     <StackPanel IsVisible="{Binding IsEmpty}" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="14"><TextBlock Text="Tu espacio de documentos" FontSize="24" FontWeight="SemiBold"/><TextBlock Text="Edición local · Tu documento permanece en tu equipo" Foreground="#918FA1"/><Button Content="Abrir PDF" Click="OpenClick" Classes="primary" HorizontalAlignment="Center"/></StackPanel>
+    </Grid></ScrollViewer>
+   </Grid>
+   <GridSplitter Grid.Column="3" ResizeDirection="Columns" Background="#292A2D"/>
+   <Grid Grid.Column="4" Background="#1B1B1F" RowDefinitions="44,*">
+    <Border BorderBrush="#292A2D" BorderThickness="0,1,0,1" Padding="12"><TextBlock Text="☷  PROPIEDADES" FontWeight="SemiBold" FontSize="12"/></Border>
+    <ScrollViewer Grid.Row="1"><StackPanel>
+     <Border Classes="section" IsVisible="{Binding OcrVisible}"><StackPanel Spacing="8">
+      <Grid ColumnDefinitions="*,Auto"><TextBlock Text="OCR LOCAL" Classes="caption" VerticalAlignment="Center"/><Button Grid.Column="1" Content="×" Command="{Binding HideOcrCommand}" IsEnabled="{Binding !Busy}" ToolTip.Tip="Cerrar panel OCR" Padding="6,2"/></Grid><TextBlock Text="{Binding OcrStatus}" TextWrapping="Wrap" FontSize="11" Foreground="#7BD0FF"/>
+      <StackPanel IsEnabled="{Binding !Busy}" Spacing="6"><ComboBox ItemsSource="{Binding OcrLanguages}" SelectedItem="{Binding OcrLanguage, Mode=TwoWay}" HorizontalAlignment="Stretch"><ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Name}"/></DataTemplate></ComboBox.ItemTemplate></ComboBox>
+       <ComboBox ItemsSource="{Binding OcrModes}" SelectedItem="{Binding SelectedOcrMode, Mode=TwoWay}" PlaceholderText="Automático" HorizontalAlignment="Stretch"><ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Name}"/></DataTemplate></ComboBox.ItemTemplate></ComboBox>
+       <CheckBox Content="Omitir páginas que ya tienen texto" IsChecked="{Binding SkipExistingText, Mode=TwoWay}" FontSize="11"/>
+       <WrapPanel><Button Content="Página actual" Command="{Binding RecognizePageCommand}" Classes="utility"/><Button Content="Todo el PDF" Command="{Binding RecognizeDocumentCommand}" Classes="utility"/></WrapPanel>
+       <TextBox Text="{Binding OcrPageRange, Mode=TwoWay}" PlaceholderText="Intervalos: 1,3-5"/><Button Content="Reconocer intervalo" Command="{Binding RecognizeRangeCommand}"/>
+      </StackPanel>
+      <ProgressBar Value="{Binding OcrProgress}" Minimum="0" Maximum="100" Height="4"/>
+      <Button Content="Cancelar OCR" Command="{Binding CancelOcrCommand}" IsVisible="{Binding OcrRunning}"/>
+      <StackPanel IsEnabled="{Binding !Busy}" Spacing="6"><ComboBox SelectionChanged="OcrReviewChanged" ItemsSource="{Binding OcrPages}" SelectedItem="{Binding SelectedOcrPage, Mode=TwoWay}" HorizontalAlignment="Stretch"><ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Label}"/></DataTemplate></ComboBox.ItemTemplate></ComboBox>
+       <TextBlock Text="{Binding OcrReviewSummary}" TextWrapping="Wrap" FontSize="11"/><TextBlock Text="Corrija palabras · confianza del OCR original" Classes="caption" TextWrapping="Wrap"/>
+       <ListBox ItemsSource="{Binding SelectedOcrPage.Words}" MaxHeight="220"><ListBox.ItemTemplate><DataTemplate><Grid ColumnDefinitions="*,42" ColumnSpacing="4"><TextBox Text="{Binding Text, Mode=TwoWay}"/><TextBlock Text="!" Foreground="#FFCC66" HorizontalAlignment="Right" IsVisible="{Binding LowConfidence}" IsHitTestVisible="False" Margin="0,0,5,0" ToolTip.Tip="Confianza inferior al 70%"/><TextBlock Grid.Column="1" Text="{Binding Confidence}" Classes="caption" VerticalAlignment="Center"/></Grid></DataTemplate></ListBox.ItemTemplate></ListBox>
+       <Button Content="Crear capa buscable" Command="{Binding ApplyOcrCommand}" Classes="primary" HorizontalAlignment="Stretch"/><Button Content="Exportar texto reconocido…" Click="ExportOcrClick"/><Button Content="Reconstrucción editable…" Click="ReconstructOcrClick" ToolTip.Tip="Crea un PDF nuevo solo con texto. No conserva imágenes y puede cambiar la distribución."/>
+      </StackPanel>
+      <TextBlock Text="Conserva el escaneo. El reconocimiento puede contener errores; revise los resultados." Classes="caption" TextWrapping="Wrap"/>
+     </StackPanel></Border>
+     <Border Classes="section"><StackPanel Spacing="8"><TextBlock Text="TEXTO ORIGINAL" Classes="caption"/><TextBlock Text="{Binding OriginalStatus}" FontSize="11" Foreground="#918FA1" TextWrapping="Wrap"/>
+      <ListBox ItemsSource="{Binding OriginalBlocks}" SelectedItem="{Binding SelectedOriginal, Mode=TwoWay}" MaxHeight="115" IsEnabled="{Binding !Busy}"><ListBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Label}" FontSize="12" TextTrimming="CharacterEllipsis"/></DataTemplate></ListBox.ItemTemplate></ListBox>
+      <StackPanel IsVisible="{Binding HasOriginal}" Spacing="8" IsEnabled="{Binding !Busy}">
+       <TextBlock Text="TIPOGRAFÍA ORIGINAL" Classes="caption"/><Border Background="#24262B" Padding="9" CornerRadius="3"><TextBlock Text="{Binding OriginalFontLabel}"/></Border>
+       <TextBox Text="{Binding OriginalDraftText, Mode=TwoWay}" TextWrapping="Wrap" MinHeight="75" MaxHeight="150"/>
+       <TextBlock Text="TAMAÑO · pt" Classes="caption"/><NumericUpDown IsEnabled="{Binding SelectedOriginal.CanChangeFontSize}" ToolTip.Tip="El tamaño se bloquea si puede afectar a texto que hereda la fuente." Value="{Binding OriginalDraftSize, Mode=TwoWay}" Minimum="4" Maximum="144" FormatString="0.##"/>
+       <TextBlock Text="{Binding OriginalGeometryLabel}" Foreground="#7BD0FF" FontSize="11" TextWrapping="Wrap"/>
+       <Button Content="Aplicar al texto original" Command="{Binding ApplyOriginalCommand}" Classes="primary" HorizontalAlignment="Stretch"/>
+       <Button Content="Eliminar texto original" Command="{Binding DeleteOriginalCommand}" HorizontalAlignment="Stretch"/>
+       <TextBlock Text="Reemplaza el operador original. El texto debe caber en su ancho y usar glifos disponibles." Classes="caption" TextWrapping="Wrap"/>
+      </StackPanel>
+     </StackPanel></Border>
+     <Border Classes="section"><StackPanel Spacing="8"><TextBlock Text="CONTENIDO AÑADIDO" Classes="caption"/>
+      <ListBox ItemsSource="{Binding PageObjects}" SelectedItem="{Binding SelectedGraphic, Mode=TwoWay}" MaxHeight="110" IsEnabled="{Binding !Busy}"><ListBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Label}" FontSize="12"/></DataTemplate></ListBox.ItemTemplate></ListBox>
+      <StackPanel IsVisible="{Binding HasGraphic}" Spacing="8" IsEnabled="{Binding !Busy}">
+       <StackPanel IsVisible="{Binding IsTextGraphic}" Spacing="8"><TextBlock Text="TIPOGRAFÍA · Liberation Sans" Classes="caption"/><TextBox Text="{Binding ObjectText, Mode=TwoWay}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="70" MaxHeight="130"/><NumericUpDown Value="{Binding ObjectFontSize, Mode=TwoWay}" Minimum="4" Maximum="144" FormatString="0.#"/><StackPanel Orientation="Horizontal" Spacing="12"><CheckBox Content="Negrita" IsChecked="{Binding ObjectBold, Mode=TwoWay}"/><CheckBox Content="Cursiva" IsChecked="{Binding ObjectItalic, Mode=TwoWay}"/></StackPanel></StackPanel>
+       <TextBlock Text="COLOR" Classes="caption"/><TextBox Text="{Binding ObjectColor, Mode=TwoWay}"/>
+       <TextBlock Text="DISPOSICIÓN · pt" Classes="caption"/><Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto,Auto" ColumnSpacing="5" RowSpacing="5"><TextBlock Text="X" Classes="caption"/><TextBlock Grid.Column="1" Text="Y" Classes="caption"/><TextBlock Grid.Row="2" Text="Ancho" Classes="caption"/><TextBlock Grid.Row="2" Grid.Column="1" Text="Alto" Classes="caption"/>
+        <NumericUpDown Grid.Row="1" Value="{Binding ObjectX, Mode=TwoWay}" Minimum="0" FormatString="0.#" ToolTip.Tip="X"/><NumericUpDown Grid.Row="1" Grid.Column="1" Value="{Binding ObjectY, Mode=TwoWay}" Minimum="0" FormatString="0.#" ToolTip.Tip="Y"/>
+        <NumericUpDown Grid.Row="3" Value="{Binding ObjectWidth, Mode=TwoWay}" Minimum="4" FormatString="0.#" ToolTip.Tip="Ancho"/><NumericUpDown Grid.Row="3" Grid.Column="1" Value="{Binding ObjectHeight, Mode=TwoWay}" Minimum="4" FormatString="0.#" ToolTip.Tip="Alto"/>
+       </Grid><TextBlock Text="TRAZO · pt" Classes="caption"/><NumericUpDown Value="{Binding ObjectStrokeWidth, Mode=TwoWay}" Minimum="0.1" Maximum="20" Increment="0.5" FormatString="0.#"/>
+       <Button Content="Aplicar propiedades" Command="{Binding ApplyGraphicCommand}" Classes="primary" HorizontalAlignment="Stretch"/><WrapPanel><Button Content="Duplicar" Command="{Binding DuplicateGraphicCommand}"/><Button Content="Eliminar" Command="{Binding DeleteGraphicCommand}"/><Button Content="↑ Adelante" Command="{Binding BringForwardCommand}"/><Button Content="↓ Atrás" Command="{Binding SendBackwardCommand}"/></WrapPanel>
+      </StackPanel>
+     </StackPanel></Border>
+     <Expander Header="Texto extraído" Margin="10"><TextBox Text="{Binding PageText}" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="120" MaxHeight="300"/></Expander>
+    </StackPanel></ScrollViewer>
+   </Grid>
+  </Grid>
+  <Grid Grid.Row="4" ColumnDefinitions="Auto,Auto,*,Auto" Background="#0D0E11">
+   <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="6,0"><Button Content="‹" Click="PreviousClick" Padding="8,2"/><TextBlock Text="{Binding PageLabel}" FontSize="11" VerticalAlignment="Center"/><Button Content="›" Click="NextClick" Padding="8,2"/></StackPanel>
+   <Border Grid.Column="1" Width="1" Background="#464555" Margin="6"/>
+   <TextBlock Grid.Column="2" Text="{Binding Status}" FontSize="11" Foreground="#918FA1" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="8,0"/>
+   <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0"><Button Content="−" Click="ZoomOutClick" Padding="8,2"/><TextBlock Text="{Binding Zoom, StringFormat='{}{0:0}%'}" FontSize="11" VerticalAlignment="Center" Margin="6,0"/><Button Content="+" Click="ZoomInClick" Padding="8,2"/><Button Content="⛶" Click="FitPageClick" ToolTip.Tip="Ajustar página completa" Padding="6,2"/><Button Content="100%" Click="ResetZoomClick" Padding="6,2"/></StackPanel>
+  </Grid>
+ </Grid>
+</Window>
