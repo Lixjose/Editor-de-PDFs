@@ -10,6 +10,7 @@ public interface IPdfDocument : IDisposable {
  void MovePage(int page, int destination);
  void InsertPages(string path, int afterPage);
  Task ExtractPagesAsync(string destination, IReadOnlyList<int> pages, CancellationToken token = default);
+ Task<IReadOnlyList<string>> SplitAsync(string destinationFolder, int pagesPerPart, CancellationToken token = default, IProgress<int>? progress = null);
  PageGeometry GetPageGeometry(int page);
  IReadOnlyList<GraphicObject> GetGraphics(int page);
  void SetGraphics(int page, IReadOnlyList<GraphicObject> objects);

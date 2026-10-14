@@ -101,3 +101,11 @@ La comprobación gráfica invoca comandos MVVM y captura la ventana; no automati
 - Ventana Avalonia con caché activa: **MYTHLIX_PHASE3_SMOKE_OK**, código 0; reemplazo de texto original, deshacer/rehacer, guardado y reapertura correctos.
 - `git diff --check`: correcto.
 - No se midieron tiempos estadísticos, memoria total del proceso ni rendimiento de documentos extensos. No se verificaron instaladores ni Windows. Véase PHASE6.md para alcance y límites.
+
+## Organización — División automática
+
+- Compilación de solución: **0 advertencias, 0 errores**.
+- Regresión xUnit: **85 aprobadas**, 0 fallidas. Diez casos nuevos incluyen tamaños 1/2/5, última parte incompleta, orden/rotación/dimensiones, conservación del original, sesión todavía editable, tamaños inválidos, destinos existentes, padre inexistente y cancelación previa o después de exportar la primera parte temporal.
+- Comprobación integrada con ventana Avalonia: **MYTHLIX_SPLIT_SMOKE_OK**, código 0. Divide el documento técnico en tres partes, reabre cada parte, compara geometría y texto extraído con Poppler y navega en el documento abierto sin cambiar revisión ni estado modificado. Limpia los resultados temporales de comprobación.
+- VSTest y ventana se ejecutaron fuera del aislamiento por sus requisitos de sockets y acceso gráfico.
+- `git diff --check`: correcto. No se automatizaron los clics del diálogo, el explorador de carpetas ni el botón de cancelación; la cancelación del motor sí tiene prueba determinista después de crear la primera parte. No se verificó Windows ni preservación de estructuras de nivel documento (formularios/marcadores).

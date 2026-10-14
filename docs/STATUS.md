@@ -30,6 +30,8 @@
 
 - Fase 6 inicial: caché LRU compartida de PNG/texto (32 MiB), PDF temporal reutilizado por revisión, invalidación tras edición y liberación al cerrar.
 
+- Organización: división automática por número de páginas, carpeta nueva, cancelación y publicación del conjunto completo sin sobrescribir destinos.
+
 ## Parcial
 
 - Visor: miniaturas bajo demanda para páginas cercanas; sin marcadores, arrastrar/soltar archivos, atajos, ajuste al ancho ni vista doble. Selección de bloques editables en lienzo; copiar texto desde el inspector.
@@ -47,7 +49,7 @@
 - Anotaciones PDF estándar, más formatos de imagen y herramientas avanzadas de transformación.
 - OCR avanzado: orientación, deskew, regiones, preprocesamiento explícito, cola de varios archivos y recuperación persistente.
 - Formularios, cifrado, firmas criptográficas, redacción segura.
-- Organización avanzada: arrastrar y soltar, selección múltiple visual, combinación por lotes y división automática. La inserción y extracción actuales no importan marcadores ni formularios de nivel documento.
+- Organización avanzada: arrastrar y soltar, selección múltiple visual, combinación por lotes. La inserción y extracción actuales no importan marcadores ni formularios de nivel documento.
 - Conversión a DOCX/HTML/PDF-A e imágenes.
 - Serilog, persistencia SQLite, extensiones, recuperación y autoguardado.
 - Instaladores MSI/DEB/RPM/AppImage y pruebas visuales automatizadas.

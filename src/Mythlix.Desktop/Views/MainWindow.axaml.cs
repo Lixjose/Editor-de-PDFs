@@ -17,6 +17,11 @@ public partial class MainWindow : Window {
    var path=args.FirstOrDefault(a=>a.EndsWith(".pdf",StringComparison.OrdinalIgnoreCase));
    if(path is null) return;
    await Execute(async()=>{await vm.OpenAsync(path);await vm.RenderAsync();});
+   if(args.Contains("--split-smoke")) {
+    try{await Diagnostics.PageSplitSmokeTest.RunAsync(vm);Console.WriteLine("MYTHLIX_SPLIT_SMOKE_OK");}
+    catch(Exception ex){Console.WriteLine("MYTHLIX_SPLIT_SMOKE_FAILED: "+ex);Environment.ExitCode=1;}
+    closing=true;vm.Dispose();Close();return;
+   }
    if(args.Contains("--phase4-smoke")) {
     try{await Diagnostics.OcrSmokeTest.RunAsync(vm,this);Console.WriteLine("MYTHLIX_PHASE4_SMOKE_OK");}
     catch(Exception ex){Console.WriteLine("MYTHLIX_PHASE4_SMOKE_FAILED: "+ex);Environment.ExitCode=1;}
@@ -115,6 +120,29 @@ public partial class MainWindow : Window {
   var path=file?.TryGetLocalPath();if(path is null)return;
   if(vm.Documents.Any(d=>string.Equals(Path.GetFullPath(path),Path.GetFullPath(d.Source),OperatingSystem.IsWindows()?StringComparison.OrdinalIgnoreCase:StringComparison.Ordinal)))throw new InvalidOperationException("Elija otro nombre para conservar los originales abiertos.");
   await Task.Run(()=>doc.Document.ExtractPagesAsync(path,pages));vm.Status="Páginas extraídas; el documento abierto conserva todas sus páginas.";
+ });
+ async void SplitPdfClick(object? s,RoutedEventArgs e)=>await Execute(async()=> {
+  if(vm.Selected is not {} doc)return;
+  var dialog=new Window{Title="Dividir PDF",Width=490,Height=245,WindowStartupLocation=WindowStartupLocation.CenterOwner};
+  var count=new NumericUpDown{Minimum=1,Maximum=doc.Document.PageCount,Value=1,FormatString="0"};
+  var accept=new Button{Content="Elegir carpeta contenedora"};var cancel=new Button{Content="Cancelar"};
+  accept.Click+=(_,_)=>dialog.Close((int)(count.Value??1));cancel.Click+=(_,_)=>dialog.Close(null);
+  dialog.Content=new StackPanel{Margin=new Thickness(20),Spacing=12,Children={new TextBlock{Text="Número de páginas por parte:"},count,new TextBlock{Text="Se exporta el contenido de páginas a una carpeta nueva.\nNo se trasladan formularios ni marcadores.",TextWrapping=Avalonia.Media.TextWrapping.Wrap},new StackPanel{Orientation=Avalonia.Layout.Orientation.Horizontal,Spacing=10,Children={accept,cancel}}}};
+  var perPart=await dialog.ShowDialog<int?>(this);if(perPart is null)return;
+  var folders=await StorageProvider.OpenFolderPickerAsync(new(){Title="Carpeta contenedora de las partes",AllowMultiple=false});
+  var parent=folders.FirstOrDefault()?.TryGetLocalPath();if(parent is null)return;
+  var destination=Path.Combine(parent,"Mythlix-partes-"+DateTime.Now.ToString("yyyyMMdd-HHmmss")+"-"+Guid.NewGuid().ToString("N")[..6]);
+  using var cancellation=new CancellationTokenSource();
+  var progress=new Window{Title="Dividiendo PDF",Width=400,Height=150,WindowStartupLocation=WindowStartupLocation.CenterOwner,CanResize=false};
+  var stop=new Button{Content="Cancelar"};stop.Click+=(_,_)=>{cancellation.Cancel();stop.IsEnabled=false;};
+  progress.Closing+=(_,_)=>cancellation.Cancel();
+  progress.Content=new StackPanel{Margin=new Thickness(20),Spacing=12,Children={new TextBlock{Text="Exportando las partes a una carpeta nueva…"},new ProgressBar{IsIndeterminate=true},stop}};
+  progress.Show(this);
+  try {
+   var results=await Task.Run(()=>doc.Document.SplitAsync(destination,perPart.Value,cancellation.Token));
+   vm.Status=$"División completada: {results.Count} PDF en {destination}";
+  } catch(OperationCanceledException) {vm.Status="División cancelada; no se publicaron partes.";}
+  finally {progress.Close();}
  });
  async void RotateClick(object? s,RoutedEventArgs e)=>await Execute(()=>vm.EditAsync("rotate"));
  async void AddClick(object? s,RoutedEventArgs e)=>await Execute(()=>vm.EditAsync("add"));

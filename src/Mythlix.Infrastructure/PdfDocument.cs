@@ -89,6 +89,35 @@ public sealed class PdfDocumentSession : IPdfDocument, IContentEditor, ISearchab
    token.ThrowIfCancellationRequested(); File.Move(temporary,destination,true);
   } finally { if(File.Exists(temporary)) File.Delete(temporary); }
  }
+ public async Task<IReadOnlyList<string>> SplitAsync(string destinationFolder, int pagesPerPart, CancellationToken token = default, IProgress<int>? progress = null) {
+  token.ThrowIfCancellationRequested();
+  if(pagesPerPart < 1 || pagesPerPart > PageCount) throw new ArgumentOutOfRangeException(nameof(pagesPerPart), "Use entre 1 y el total de páginas.");
+  var destination = Path.GetFullPath(destinationFolder);
+  if(Directory.Exists(destination) || File.Exists(destination)) throw new IOException("La carpeta de destino ya existe. Elija una carpeta nueva.");
+  var parent = Path.GetDirectoryName(destination) ?? throw new ArgumentException("Destino inválido.", nameof(destinationFolder));
+  if(!Directory.Exists(parent)) throw new DirectoryNotFoundException("La carpeta contenedora no existe.");
+  var staging = Path.Combine(parent, ".mythlix-split-" + Guid.NewGuid().ToString("N"));
+  using var imported = PdfReader.Open(new MemoryStream(Snapshot()), PdfDocumentOpenMode.Import);
+  var names = new List<string>();
+  Directory.CreateDirectory(staging);
+  try {
+   for(var start = 0; start < imported.PageCount; start += pagesPerPart) {
+    token.ThrowIfCancellationRequested();
+    using var output = new PdfDocument();
+    var end = Math.Min(start + pagesPerPart, imported.PageCount);
+    for(var page = start; page < end; page++) { token.ThrowIfCancellationRequested(); output.AddPage(imported.Pages[page]); }
+    var name = $"parte-{names.Count + 1:D4}-paginas-{start + 1}-{end}.pdf";
+    using var buffer = new MemoryStream(); output.Save(buffer, false);
+    await File.WriteAllBytesAsync(Path.Combine(staging, name), buffer.ToArray(), token);
+    names.Add(name);
+    progress?.Report(names.Count);
+   }
+   token.ThrowIfCancellationRequested();
+   // Same-parent rename publishes the complete set without replacing an existing folder.
+   Directory.Move(staging, destination);
+   return names.Select(name => Path.Combine(destination, name)).ToArray();
+  } finally { if(Directory.Exists(staging)) Directory.Delete(staging, true); }
+ }
  public async Task SaveCopyAsync(string destination, CancellationToken token = default) {
   var temp = destination + "." + Guid.NewGuid().ToString("N") + ".tmp";
   try { await File.WriteAllBytesAsync(temp, Snapshot(), token); token.ThrowIfCancellationRequested(); File.Move(temp, destination, true); }

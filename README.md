@@ -22,7 +22,7 @@ Linux: instale `poppler-utils` con el gestor de su distribución. Windows: obten
 2. Navegue por el índice de páginas o las flechas. La miniatura corresponde a la página actual.
 3. La página se ajusta automáticamente. Puede cambiar el zoom entre 25 y 300 % o usar el botón de ajuste de página. El panel derecho permite seleccionar y copiar texto extraído.
 4. Busque texto; el buscador avanza a la siguiente página que contiene una coincidencia, recorriendo el documento.
-5. Rote, añada páginas en blanco o elimine páginas. Deshacer y rehacer restauran la estructura completa del PDF.
+5. Desde **Organizar**, duplique, mueva, inserte o extraiga páginas; use **Dividir PDF en partes** para exportar grupos consecutivos a una carpeta nueva. Rote, añada páginas en blanco o elimine páginas. Deshacer y rehacer restauran la estructura completa del PDF.
 6. Añada texto, imágenes o formas desde la segunda barra. Seleccione y arrastre para mover; use el tirador inferior derecho para redimensionar. Ajuste propiedades y texto nuevo en el inspector.
 7. Seleccione un bloque en **Texto original**, cambie su texto y aplique. Funciona con bloques simples y fuentes estándar compatibles; los casos no seguros se mantienen en solo lectura.
 8. Para escaneos, use **OCR → Reconocimiento local**, revise palabras y cree una capa buscable o exporte una reconstrucción editable.
@@ -49,3 +49,5 @@ También puede abrir un PDF al iniciar: `dotnet run --project src/Mythlix.Deskto
 Para comprobar la nueva interfaz y la edición original: `dotnet run --project src/Mythlix.Desktop --no-build -- --phase3-smoke references/Mythlix-Documento-Tecnico.pdf`.
 
 OCR requiere Tesseract con modelos español/inglés. Ya están disponibles localmente en esta máquina; consulte PHASE4.md para instalarlo en otra.
+
+Comprobación integrada de división y navegación: `dotnet run --project src/Mythlix.Desktop --no-build -- --split-smoke references/Mythlix-Documento-Tecnico.pdf`.
