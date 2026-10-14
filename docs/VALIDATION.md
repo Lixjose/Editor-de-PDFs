@@ -109,3 +109,12 @@ La comprobación gráfica invoca comandos MVVM y captura la ventana; no automati
 - Comprobación integrada con ventana Avalonia: **MYTHLIX_SPLIT_SMOKE_OK**, código 0. Divide el documento técnico en tres partes, reabre cada parte, compara geometría y texto extraído con Poppler y navega en el documento abierto sin cambiar revisión ni estado modificado. Limpia los resultados temporales de comprobación.
 - VSTest y ventana se ejecutaron fuera del aislamiento por sus requisitos de sockets y acceso gráfico.
 - `git diff --check`: correcto. No se automatizaron los clics del diálogo, el explorador de carpetas ni el botón de cancelación; la cancelación del motor sí tiene prueba determinista después de crear la primera parte. No se verificó Windows ni preservación de estructuras de nivel documento (formularios/marcadores).
+
+## Conversión — Páginas a PNG
+
+- Compilación final: **0 advertencias, 0 errores**.
+- Regresión xUnit: **96 aprobadas**, 0 fallidas. Once casos nuevos cubren orden/nombres, tamaños y páginas inválidos, destino existente, fallo en la segunda página, cancelación tras escribir la primera y PNG real rotado de 800 × 400 píxeles con original intacto.
+- Ventana Avalonia: **MYTHLIX_IMAGES_SMOKE_OK**, código 0. Rota una página sin guardar, exporta páginas en orden solicitado, compara los bytes PNG de la página editada con el renderizado actual, verifica el lado mayor de 800 píxeles y comprueba que exportar no cambia revisión/estado modificado; posteriormente deshace la rotación.
+- VSTest y comprobación gráfica ejecutados fuera del aislamiento para sockets y acceso a la ventana.
+- `git diff --check`: correcto.
+- Sin automatización de clics del diálogo/explorador ni validación Windows. Formatos, límites y comportamiento ante cierre abrupto descritos en IMAGE_EXPORT.md.

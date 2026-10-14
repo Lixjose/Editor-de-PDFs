@@ -32,6 +32,8 @@
 
 - Organización: división automática por número de páginas, carpeta nueva, cancelación y publicación del conjunto completo sin sobrescribir destinos.
 
+- Conversión inicial: páginas a PNG por intervalos y orden solicitado, lado mayor configurable (128–2400 px), progreso, cancelación y exportación del estado editado actual a una carpeta nueva.
+
 ## Parcial
 
 - Visor: miniaturas bajo demanda para páginas cercanas; sin marcadores, arrastrar/soltar archivos, atajos, ajuste al ancho ni vista doble. Selección de bloques editables en lienzo; copiar texto desde el inspector.
@@ -50,7 +52,7 @@
 - OCR avanzado: orientación, deskew, regiones, preprocesamiento explícito, cola de varios archivos y recuperación persistente.
 - Formularios, cifrado, firmas criptográficas, redacción segura.
 - Organización avanzada: arrastrar y soltar, selección múltiple visual, combinación por lotes. La inserción y extracción actuales no importan marcadores ni formularios de nivel documento.
-- Conversión a DOCX/HTML/PDF-A e imágenes.
+- Conversión a DOCX/HTML/PDF-A, imágenes a PDF y formatos de imagen adicionales a PNG.
 - Serilog, persistencia SQLite, extensiones, recuperación y autoguardado.
 - Instaladores MSI/DEB/RPM/AppImage y pruebas visuales automatizadas.
 

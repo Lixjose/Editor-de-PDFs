@@ -17,6 +17,11 @@ public partial class MainWindow : Window {
    var path=args.FirstOrDefault(a=>a.EndsWith(".pdf",StringComparison.OrdinalIgnoreCase));
    if(path is null) return;
    await Execute(async()=>{await vm.OpenAsync(path);await vm.RenderAsync();});
+   if(args.Contains("--images-smoke")) {
+    try{await Diagnostics.ImageExportSmokeTest.RunAsync(vm);Console.WriteLine("MYTHLIX_IMAGES_SMOKE_OK");}
+    catch(Exception ex){Console.WriteLine("MYTHLIX_IMAGES_SMOKE_FAILED: "+ex);Environment.ExitCode=1;}
+    closing=true;vm.Dispose();Close();return;
+   }
    if(args.Contains("--split-smoke")) {
     try{await Diagnostics.PageSplitSmokeTest.RunAsync(vm);Console.WriteLine("MYTHLIX_SPLIT_SMOKE_OK");}
     catch(Exception ex){Console.WriteLine("MYTHLIX_SPLIT_SMOKE_FAILED: "+ex);Environment.ExitCode=1;}
@@ -142,6 +147,34 @@ public partial class MainWindow : Window {
    var results=await Task.Run(()=>doc.Document.SplitAsync(destination,perPart.Value,cancellation.Token));
    vm.Status=$"División completada: {results.Count} PDF en {destination}";
   } catch(OperationCanceledException) {vm.Status="División cancelada; no se publicaron partes.";}
+  finally {progress.Close();}
+ });
+ async void ExportImagesClick(object? s,RoutedEventArgs e)=>await Execute(async()=> {
+  if(vm.Selected is not {} doc)return;
+  var dialog=new Window{Title="Exportar páginas como PNG",Width=510,Height=330,WindowStartupLocation=WindowStartupLocation.CenterOwner};
+  var pages=new TextBox{Text=$"1-{doc.Document.PageCount}",PlaceholderText="Ejemplo: 3,1-2"};
+  var size=new NumericUpDown{Minimum=128,Maximum=2400,Value=1600,Increment=100,FormatString="0"};
+  var accept=new Button{Content="Elegir carpeta contenedora"};var cancel=new Button{Content="Cancelar"};
+  accept.Click+=(_,_)=>dialog.Close(true);cancel.Click+=(_,_)=>dialog.Close(false);
+  dialog.Content=new StackPanel{Margin=new Thickness(20),Spacing=12,Children={new TextBlock{Text="Páginas e intervalos (1,3-5):"},pages,new TextBlock{Text="Lado mayor en píxeles (128–2400):"},size,new TextBlock{Text="Se conserva la proporción. Cada página se exporta como una imagen.",TextWrapping=Avalonia.Media.TextWrapping.Wrap},new StackPanel{Orientation=Avalonia.Layout.Orientation.Horizontal,Spacing=10,Children={accept,cancel}}}};
+  if(!await dialog.ShowDialog<bool>(this))return;
+  var selection=pages.Text??"";var parsed=Mythlix.Core.PageSelection.Parse(selection,doc.Document.PageCount);
+  var folders=await StorageProvider.OpenFolderPickerAsync(new(){Title="Carpeta contenedora de las imágenes",AllowMultiple=false});
+  var parent=folders.FirstOrDefault()?.TryGetLocalPath();if(parent is null)return;
+  var destination=Path.Combine(parent,"Mythlix-imagenes-"+DateTime.Now.ToString("yyyyMMdd-HHmmss")+"-"+Guid.NewGuid().ToString("N")[..6]);
+  using var cancellation=new CancellationTokenSource();
+  var progress=new Window{Title="Exportando imágenes",Width=410,Height=160,WindowStartupLocation=WindowStartupLocation.CenterOwner,CanResize=false};
+  var label=new TextBlock{Text=$"Exportando 0 de {parsed.Count} páginas…"};
+  var bar=new ProgressBar{Minimum=0,Maximum=parsed.Count};
+  var stop=new Button{Content="Cancelar"};stop.Click+=(_,_)=>{cancellation.Cancel();stop.IsEnabled=false;};
+  progress.Closing+=(_,_)=>cancellation.Cancel();
+  progress.Content=new StackPanel{Margin=new Thickness(20),Spacing=12,Children={label,bar,stop}};
+  progress.Show(this);
+  var updates=new Progress<int>(n=>{bar.Value=n;label.Text=$"Exportando {n} de {parsed.Count} páginas…";});
+  try {
+   var results=await vm.ExportImagesAsync(selection,(int)(size.Value??1600),destination,cancellation.Token,updates);
+   vm.Status=$"Exportación completada: {results.Count} PNG en {destination}";
+  } catch(OperationCanceledException) {vm.Status="Exportación cancelada; no se publicaron imágenes.";}
   finally {progress.Close();}
  });
  async void RotateClick(object? s,RoutedEventArgs e)=>await Execute(()=>vm.EditAsync("rotate"));
