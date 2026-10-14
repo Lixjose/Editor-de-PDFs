@@ -28,9 +28,11 @@
 
 - Fase 5 inicial: duplicar páginas, mover hacia atrás/delante, insertar contenido de otro PDF y extraer intervalos ordenados a un PDF nuevo desde Organizar. Historial para modificaciones; extracción mediante temporal.
 
+- Fase 6 inicial: caché LRU compartida de PNG/texto (32 MiB), PDF temporal reutilizado por revisión, invalidación tras edición y liberación al cerrar.
+
 ## Parcial
 
-- Visor: miniaturas bajo demanda para páginas cercanas; sin marcadores, caché LRU de páginas, arrastrar/soltar archivos, atajos, ajuste al ancho ni vista doble. Selección de bloques editables en lienzo; copiar texto desde el inspector.
+- Visor: miniaturas bajo demanda para páginas cercanas; sin marcadores, arrastrar/soltar archivos, atajos, ajuste al ancho ni vista doble. Selección de bloques editables en lienzo; copiar texto desde el inspector.
 - MVVM: edición gráfica mediante comandos; diálogos de archivos y acciones generales de ventana conservan eventos.
 - Historial por snapshots con coste proporcional al documento; no recuperación de sesión.
 - Seguridad: límites básicos; sin aislamiento completo del parser ni validación de firmas.

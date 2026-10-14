@@ -32,11 +32,11 @@ Fuentes primarias:
 
 `Mythlix.Desktop` aloja la vista Avalonia y modelos observables MVVM. Los eventos de vista gestionan diálogos nativos y delegan operaciones a los modelos. `DocumentViewModel` conserva la sesión, página y pilas de historial. Las tareas pesadas no se ejecutan en el hilo de UI. `WorkspaceViewModel` coordina documentos y renderizado. La fase 2 incorpora comandos MVVM para edición gráfica y `PageCanvas` para selección y gestos. Los servicios de diálogos e inyección de dependencias siguen pendientes.
 
-Solo la página seleccionada y su miniatura se conservan como imágenes; al reemplazarlas se liberan los bitmaps. No se precargan cientos de páginas. El zoom actual escala una imagen de hasta 1600 píxeles; el renderizador permite hasta 2400. No hay caché LRU ni renderizado progresivo aún. La fase 3 añade hasta cinco miniaturas cercanas bajo demanda.
+Solo la página seleccionada y su miniatura se conservan como imágenes; al reemplazarlas se liberan los bitmaps. No se precargan cientos de páginas. El zoom actual escala una imagen de hasta 1600 píxeles; el renderizador permite hasta 2400. La fase 6 inicial incorpora una caché LRU compartida de PNG y texto extraído con límite de 32 MiB; no incluye bitmaps decodificados ni renderizado progresivo. La fase 3 añade hasta cinco miniaturas cercanas bajo demanda.
 
 Deshacer utiliza instantáneas de PDF, sin rasterizar el documento exportado. El historial de deshacer reduce entradas cuando supera 64 MB; una sola entrada puede superar el presupuesto. Este mecanismo no es óptimo para documentos grandes y será sustituido por comandos de edición incrementales. El límite inicial por archivo es 256 MB; no hay límite agregado entre pestañas.
 
-Guardado: archivo temporal en el directorio de destino y renombrado al completar la escritura. El original está protegido en el flujo UI. Un archivo temporal de trabajo por sesión alimenta Poppler y se elimina al cerrar normalmente. No hay recuperación tras cierre abrupto, autoguardado, cifrado de temporales ni garantía de escritura durable ante corte eléctrico. No se ejecutan acciones ni JavaScript del PDF desde la UI.
+Guardado: archivo temporal en el directorio de destino y renombrado al completar la escritura. El original está protegido en el flujo UI. Un archivo temporal de trabajo por sesión, actualizado solo cuando cambia la revisión, alimenta Poppler y se elimina al cerrar normalmente. No hay recuperación tras cierre abrupto, autoguardado, cifrado de temporales ni garantía de escritura durable ante corte eléctrico. No se ejecutan acciones ni JavaScript del PDF desde la UI.
 
 ## Edición gráfica (fase 2)
 

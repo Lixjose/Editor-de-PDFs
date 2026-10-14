@@ -10,6 +10,7 @@ public sealed partial class DocumentViewModel : ObservableObject, IDisposable {
  public IPdfDocument Document { get; }
  public string WorkingPath { get; } = Path.Combine(Path.GetTempPath(), "mythlix-" + Guid.NewGuid().ToString("N") + ".pdf");
  public long Revision {get;set;}
+ public long PreparedRevision {get;set;} = -1;
  public Stack<byte[]> Undo { get; } = new();
  public Stack<byte[]> Redo { get; } = new();
  [ObservableProperty] private bool modified;
@@ -18,7 +19,8 @@ public sealed partial class DocumentViewModel : ObservableObject, IDisposable {
  public void Dispose() { Document.Dispose(); if(File.Exists(WorkingPath)) File.Delete(WorkingPath); }
 }
 public sealed partial class WorkspaceViewModel : ObservableObject, IDisposable {
- readonly IPdfRenderer renderer = new PopplerRenderer();
+ readonly PopplerRenderer poppler = new();
+ readonly CachedPdfRenderer renderer = new(new PopplerRenderer());
  public ObservableCollection<DocumentViewModel> Documents { get; } = new();
  public ObservableCollection<int> Pages { get; } = new();
  [ObservableProperty] private DocumentViewModel? selected;
@@ -41,11 +43,19 @@ public sealed partial class WorkspaceViewModel : ObservableObject, IDisposable {
   if(existing is not null) { Selected = existing; return; }
   var doc = await Task.Run(() => new DocumentViewModel(path)); Documents.Add(doc); Selected = doc;
  }
+ async Task PrepareWorkingCopyAsync(DocumentViewModel doc, CancellationToken token = default) {
+  if(doc.PreparedRevision == doc.Revision && File.Exists(doc.WorkingPath)) return;
+  renderer.Invalidate(doc.WorkingPath);
+  if(doc == Selected) ResetThumbnails();
+  var revision = doc.Revision;
+  await Task.Run(() => doc.Document.SaveCopyAsync(doc.WorkingPath, token), token);
+  doc.PreparedRevision = revision;
+ }
  public async Task RenderAsync() {
   var doc = Selected; if(doc is null) return;
   CurrentPage = Math.Clamp(CurrentPage, 1, doc.Document.PageCount); doc.Page = CurrentPage;
-  var state = await Task.Run(async () => {
-   await doc.Document.SaveCopyAsync(doc.WorkingPath);
+  await PrepareWorkingCopyAsync(doc);
+  var state = await Task.Run(() => {
    return (Geometry:doc.Document.GetPageGeometry(CurrentPage), Objects:doc.Document.GetGraphics(CurrentPage), Text:doc.Document is IContentEditor editor?editor.AnalyzeText(CurrentPage):new TextAnalysis([],0,"Motor sin edición original."));
   });
   var png = await renderer.RenderAsync(doc.WorkingPath, CurrentPage, 1600, CancellationToken.None);
@@ -93,6 +103,7 @@ public sealed partial class WorkspaceViewModel : ObservableObject, IDisposable {
  }
  public async Task SearchAsync() {
   var doc = Selected; if(doc is null || string.IsNullOrWhiteSpace(Query)) return;
+  await PrepareWorkingCopyAsync(doc);
   for(int n=1;n<=doc.Document.PageCount;n++) {
    var page = (CurrentPage + n - 1) % doc.Document.PageCount + 1;
    var text = await renderer.ExtractTextAsync(doc.WorkingPath,page,CancellationToken.None);
@@ -101,8 +112,8 @@ public sealed partial class WorkspaceViewModel : ObservableObject, IDisposable {
   Status="No se encontró el texto. Use OCR para reconocer páginas escaneadas.";
  }
  public void CloseSelected() {
-  var doc=Selected; if(doc is null) return; Documents.Remove(doc); Selected=Documents.FirstOrDefault(); doc.Dispose();
+  var doc=Selected; if(doc is null) return; Documents.Remove(doc); Selected=Documents.FirstOrDefault(); renderer.Invalidate(doc.WorkingPath); doc.Dispose();
   if(Selected is null) { var old=PageImage; PageImage=null; old?.Dispose(); old=Thumbnail; Thumbnail=null; old?.Dispose(); PageText=""; PageObjects.Clear(); SelectedGraphic=null; SelectedOriginal=null; OriginalBlocks.Clear(); ResetThumbnails(); Status="Abra un PDF para comenzar."; }
  }
- public void Dispose() { foreach(var card in PageThumbnails)card.Dispose(); foreach(var doc in Documents) doc.Dispose(); PageImage?.Dispose(); Thumbnail?.Dispose(); }
+ public void Dispose() { renderer.Clear(); foreach(var card in PageThumbnails)card.Dispose(); foreach(var doc in Documents) doc.Dispose(); PageImage?.Dispose(); Thumbnail?.Dispose(); }
 }

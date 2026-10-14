@@ -92,3 +92,12 @@ La comprobación gráfica invoca comandos MVVM y captura la ventana; no automati
 - La comprobación de ventana también construye un PDF de dos páginas: cancelar después de la primera conserva su revisión sin modificar el PDF; fallar en la segunda por rotación conserva la primera y permite aplicar su capa buscable.
 - Captura actualizada y revisada: `artifacts/phase4-preview.png`.
 - Se mantienen las pruebas de igualdad de píxeles y ausencia de duplicados de capa. No se midió una mejora estadística de precisión ni se verificó Windows. Orientación, deskew, regiones y recortes siguen pendientes.
+
+## Fase 6 — Caché y preparación por revisión
+
+- Compilación de la solución: **0 advertencias, 0 errores**.
+- Regresión xUnit: **75 aprobadas**, 0 fallidas. VSTest necesitó ejecución fuera del aislamiento para su socket local.
+- Cinco casos nuevos cubren reutilización de imágenes/texto, protección de bytes, expulsión LRU, límite agregado, invalidación de documentos/resoluciones, cancelación y resultados pendientes tras invalidación.
+- Ventana Avalonia con caché activa: **MYTHLIX_PHASE3_SMOKE_OK**, código 0; reemplazo de texto original, deshacer/rehacer, guardado y reapertura correctos.
+- `git diff --check`: correcto.
+- No se midieron tiempos estadísticos, memoria total del proceso ni rendimiento de documentos extensos. No se verificaron instaladores ni Windows. Véase PHASE6.md para alcance y límites.

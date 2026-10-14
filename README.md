@@ -40,7 +40,9 @@ dotnet test Mythlix.sln -m:1
 
 En PowerShell: `./scripts/publish.ps1 -Runtime win-x64`. Los scripts publican carpetas portables autocontenidas; no crean instaladores MSI, DEB, RPM o AppImage. El funcionamiento en Windows debe verificarse en una máquina Windows con Poppler.
 
-Consulte [arquitectura y viabilidad](docs/ARCHITECTURE.md), [estado de funciones](docs/STATUS.md), [edición gráfica](docs/PHASE2.md), [texto original e interfaz](docs/PHASE3.md), [OCR e instalación](docs/PHASE4.md) y [validación](docs/VALIDATION.md). Los archivos de referencia se conservan en `references/`.
+La fase 6 inicial añade caché LRU de renderizado/texto y reutilización del PDF temporal por revisión.
+
+Consulte [arquitectura y viabilidad](docs/ARCHITECTURE.md), [estado de funciones](docs/STATUS.md), [edición gráfica](docs/PHASE2.md), [texto original e interfaz](docs/PHASE3.md), [OCR e instalación](docs/PHASE4.md) y [optimización](docs/PHASE6.md) y [validación](docs/VALIDATION.md). Los archivos de referencia se conservan en `references/`.
 
 También puede abrir un PDF al iniciar: `dotnet run --project src/Mythlix.Desktop -- ruta/documento.pdf`. La comprobación automatizada de ventana se invoca con `--smoke-test ruta/documento.pdf` y cierra la aplicación tras renderizar.
 
