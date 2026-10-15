@@ -11,7 +11,7 @@ namespace Mythlix.Infrastructure.TextEditing;
 internal static class NativeRunExtractor {
  sealed record State(string Font = "", double Size = 0, double Tc = 0, double Tw = 0,
   double Scale = 1, double Rise = 0, double Leading = 0, double Mode = 0, RunRgbColor? Color = null);
- sealed class Unsupported(string code, string message) : Exception(message) { public string Code { get; } = code; }
+ sealed class Unsupported(string code, string message) : InvalidOperationException(message) { public string Code { get; } = code; }
  static readonly Encoding WinAnsi;
  static NativeRunExtractor() {
   Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);

@@ -17,12 +17,12 @@ internal sealed class NativeWinAnsiEncodingResolver : IRunMetricsProvider {
   WinAnsi=Encoding.GetEncoding(1252,EncoderFallback.ExceptionFallback,DecoderFallback.ExceptionFallback);
  }
  NativeWinAnsiEncodingResolver(ImmutableDictionary<PdfFontReference,Metrics> fonts) => this.fonts=fonts;
- internal static NativeWinAnsiEncodingResolver Create(PdfPage page,NativeRunAnalysis analysis) {
+ internal static NativeWinAnsiEncodingResolver Create(PdfPage page,NativeRunAnalysis analysis,IEnumerable<PdfFontReference>? additionalFonts=null) {
   var (resources,scope)=NativeRunExtractor.Resources(page);
   var dictionary=resources?.Elements.GetDictionary("/Font");
   var builder=ImmutableDictionary.CreateBuilder<PdfFontReference,Metrics>();
-  foreach(var reference in analysis.Runs.Select(r=>r.Run.Style.Font).Distinct()) {
-   if(reference.ResourceScopeId!=scope) throw new InvalidOperationException("El ámbito de recursos cambió.");
+  foreach(var reference in analysis.Runs.Select(r=>r.Run.Style.Font).Concat(additionalFonts??[]).Distinct()) {
+   if(reference.Context!=analysis.Context || reference.ResourceScopeId!=scope) throw new InvalidOperationException("El ámbito de recursos cambió.");
    var resource=dictionary?.Elements.GetDictionary(reference.ResourceName);
    var font=NativeRunExtractor.ReadFont(resource);
    var vertical=StandardFontMetrics.Fonts[font.Family];

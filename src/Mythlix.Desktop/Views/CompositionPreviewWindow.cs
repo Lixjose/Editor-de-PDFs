@@ -72,6 +72,7 @@ public sealed class CompositionPreviewWindow : Window {
    var button=new Button{HorizontalAlignment=Avalonia.Layout.HorizontalAlignment.Stretch,Content=new TextBlock{Text=$"Elegir fuente: {resource.ResourceName} · {style.FamilyName} · {(style.Bold?"negrita ":"")}{(style.Italic?"cursiva":"")}",TextWrapping=TextWrapping.Wrap}};
    fontButtons.Add(resource,button);button.Click+=async (_,_)=>await ChooseFont(resource);controls.Children.Add(button);
   }
+  alignment.SelectedIndex=(int)options.Alignment;
   x.Value=(decimal)options.Bounds.X;y.Value=(decimal)options.Bounds.Y;width.Value=(decimal)options.Bounds.Width;
   height.Value=(decimal)options.Bounds.Height;baseline.Value=(decimal)options.FirstBaselineY;leading.Value=(decimal)options.LineHeightPt;
   var positions=new UniformGrid{Columns=2,Rows=3};

@@ -6,7 +6,7 @@ using PdfSharp.Pdf;
 namespace Mythlix.Desktop.Diagnostics;
 
 internal static class CompositionPreviewSmokeTest {
- internal static async Task RunAsync(WorkspaceViewModel vm,MainWindow owner,bool testCommit=false) {
+ internal static async Task RunAsync(WorkspaceViewModel vm,MainWindow owner,bool testCommit=false,bool testReopen=false) {
   var path=Path.Combine(Path.GetTempPath(),"mythlix-composition-smoke-"+Guid.NewGuid().ToString("N")+".pdf");
   try {
    using(var pdf=new PdfDocument()) {
@@ -79,6 +79,7 @@ internal static class CompositionPreviewSmokeTest {
      await vm.RunAsync(()=>vm.HistoryAsync(true));
      if(string.Concat(session.AnalyzeTextRuns(1,doc.Revision).Runs.Select(r=>r.Run.Text))!=text || doc.Redo.Count!=0)
       throw new InvalidOperationException("Rehacer no recuperó la edición.");
+     if(testReopen)await CheckReopenAsync(vm,owner,directory:Path.GetDirectoryName(path)!,originalText:text);
      return;
     }
     // Explicit diagnostic action: verify stale views close and release their glyphs.
@@ -87,4 +88,49 @@ internal static class CompositionPreviewSmokeTest {
    } finally {window.Close();}
   } finally {File.Delete(path);}
  }
+ static async Task CheckReopenAsync(WorkspaceViewModel vm,MainWindow owner,string directory,string originalText) {
+  var saved=Path.Combine(directory,"mythlix-reopened-"+Guid.NewGuid().ToString("N")+".pdf");
+  try {
+   await vm.RunAsync(async()=> {await vm.Selected!.Document.SaveCopyAsync(saved);await vm.OpenAsync(saved);await vm.RenderAsync();});
+   await vm.InspectTextRunsCommand.ExecuteAsync(null);
+   var doc=vm.Selected!;var session=(PdfDocumentSession)doc.Document;var block=vm.SelectedInspectedBlock!;
+   if(block.Runs.Select(r=>r.BaselineY).Distinct().Count()<2)throw new InvalidOperationException("La prueba no abrió un párrafo de varias líneas.");
+   var inspected=session.InspectParagraphDraft(1,doc.Revision,block.BlockId);
+   if(!inspected.IsSupported || !inspected.IsManaged || inspected.Draft!.Text!=originalText)
+    throw new InvalidOperationException("No se recuperó el texto lógico de la composición guardada.");
+   var window=owner.CreateCompositionPreview();
+   await vm.RunAsync(async()=> {
+    window.Show(owner);
+    foreach(var style in block.Runs.Select(r=>r.Run.Style).DistinctBy(s=>s.Font)) {
+     var name=$"Mythlix.Infrastructure.Fonts.LiberationSans-{(style.Bold?"Bold":"Regular")}.ttf";
+     using var stream=typeof(PdfDocumentSession).Assembly.GetManifestResourceStream(name)!;
+     using var memory=new MemoryStream();stream.CopyTo(memory);window.BindFont(style.Font,memory.ToArray(),name);
+    }
+    if(window.DraftTextBox.Text!=originalText)throw new InvalidOperationException("El editor inventó saltos para los cortes suaves.");
+    window.DraftTextBox.SelectionStart=originalText.Length;window.DraftTextBox.SelectionEnd=originalText.Length;
+    window.DraftTextBox.Text=originalText+"\r\nOtra línea";
+    window.Compose();window.AcceptReflow(true);
+    if(!window.CanApply)throw new InvalidOperationException("No se habilitó la segunda edición del párrafo guardado.");
+    await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(()=>{},Avalonia.Threading.DispatcherPriority.Background);
+    window.UpdateLayout();
+    using(var image=new Avalonia.Media.Imaging.RenderTargetBitmap(new Avalonia.PixelSize((int)window.Bounds.Width,(int)window.Bounds.Height),new Avalonia.Vector(96,96))) {
+     image.Render(window);image.Save(Path.Combine(Path.GetTempPath(),"mythlix-composition-reopened.png"),Avalonia.Media.Imaging.PngBitmapEncoderOptions.Default);
+    }
+    await window.ApplyAsync();
+   });
+   if(window.IsVisible || doc.Revision!=1 || doc.Undo.Count!=1)throw new InvalidOperationException("La segunda edición no se confirmó: "+vm.Status);
+   string LogicalText() {
+    var current=session.AnalyzeTextRuns(1,doc.Revision).Runs.First().Run.Sources[0].Source.BlockId;
+    var recovered=session.InspectParagraphDraft(1,doc.Revision,current);
+    if(!recovered.IsSupported)throw new InvalidOperationException("La composición perdió sus datos al cambiar el historial.");
+    return recovered.Draft!.Text;
+   }
+   if(LogicalText()!=originalText+"\r\nOtra línea")throw new InvalidOperationException("El salto duro no sobrevivió a la escritura.");
+   await vm.RunAsync(()=>vm.HistoryAsync(false));
+   if(LogicalText()!=originalText)throw new InvalidOperationException("Deshacer no recuperó la composición multilínea anterior.");
+   await vm.RunAsync(()=>vm.HistoryAsync(true));
+   if(LogicalText()!=originalText+"\r\nOtra línea")throw new InvalidOperationException("Rehacer no recuperó el salto duro.");
+  } finally {File.Delete(saved);}
+ }
+
 }

@@ -4,7 +4,7 @@
 
 - **2A, implementado:** compositor métrico WinAnsi independiente de la UI, métricas de recursos reales y propuestas de composición inmutables.
 - **2B, vista previa experimental integrada:** fuente física explícita, adaptador sin recalcular cortes y pruebas de estilos mixtos en cuatro alineaciones. Admite bloques originales de una sola línea, recomponiéndolos a petición. No afirma equivalencia con los contornos originales.
-- **2C, integrada en alcance inicial:** motor transaccional y ventana de borrador con composición, confirmación explícita e historial del PDF. Se conserva la restricción de un bloque original de una línea y se rechazan colisiones y fondos dibujados.
+- **2C, integrada en alcance inicial:** motor transaccional y ventana de borrador con composición, confirmación explícita e historial del PDF. Los bloques ajenos siguen limitados a una línea y se rechazan colisiones y fondos dibujados. [La fase 3A](PHASE3_MANAGED_PARAGRAPHS.md) añade reapertura multilínea de composiciones propias verificadas.
 
 El motor y el editor existentes siguen funcionando. La vista previa se abre a petición. La composición solo se escribe tras revisar y aplicar explícitamente el borrador; no se llama automáticamente desde RenderAsync.
 
@@ -61,7 +61,7 @@ La prueba `ParagraphGlyphPreviewTests` dibuja texto blanco con ñ sobre azul y c
 
 ### Vista previa integrada
 
-En **Texto original → Análisis de fragmentos → Editar borrador y recomponer…** se abre una ventana independiente. Exige analizar y seleccionar un bloque compatible de una sola línea; los bloques de varias líneas se rechazan porque BT/ET no define por sí mismo un párrafo. La ventana explica que se recomponen los fragmentos y que no se preservan sus posiciones originales ni TJ. El usuario elige un archivo TTF/OTF por recurso, con nombre y huella visibles, y pulsa Componer y revisar. Puede ajustar posición, dimensiones, línea base, interlineado, alineación y fondo blanco/azul/oscuro de la vista. No hay selección automática de una fuente sustituta.
+En **Texto original → Análisis de fragmentos → Editar borrador y recomponer…** se abre una ventana independiente. Exige analizar y seleccionar un bloque compatible de una línea o una composición propia guardada y verificada por [la fase 3A](PHASE3_MANAGED_PARAGRAPHS.md). Los bloques multilínea ajenos se rechazan porque BT/ET no define por sí mismo un párrafo. La ventana explica que se recomponen los fragmentos y que no se preservan sus posiciones originales ni TJ. El usuario elige un archivo TTF/OTF por recurso, con nombre y huella visibles, y pulsa Componer y revisar. Puede ajustar posición, dimensiones, línea base, interlineado, alineación y fondo blanco/azul/oscuro de la vista. No hay selección automática de una fuente sustituta.
 
 La vista libera los GlyphRun antes de reemplazar una fuente y al cerrar. Un cambio de documento, página, revisión o bloque cierra la ventana y elimina las suscripciones. Los resultados con diagnósticos no se dibujan. La vista y los cambios de borrador no modifican historial, revisión ni contenido PDF. La confirmación explícita integrada en 2C se describe al final.
 
@@ -101,8 +101,10 @@ Cada cambio de texto, opciones o fuente descarta el plan y los GlyphRun y desmar
 
 `WorkspaceViewModel.ApplyParagraphCompositionAsync` comprueba propietario, página y revisión viva, llama al escritor y, solo tras el éxito, registra una entrada Undo, vacía Redo, marca el documento modificado y adopta `NextRevision`. Luego actualiza el render. Si ese refresco falla después de una escritura correcta, el cambio sigue registrado en Deshacer y se informa del fallo de vista; no se presenta como una escritura rechazada. La ventana permanece durante esta operación y se cierra al finalizar. Cancelar, un borrador inválido o un rechazo del escritor no crean historial ni cambian revisión/Modified.
 
-La inspección selecciona por defecto el primer objeto compatible con fragmentos, evitando el contenedor original cuyas cadenas quedaron vacías tras una sustitución. La salida nueva mantiene los segmentos en un único BT/ET. Un resultado de varias líneas sigue fuera del alcance de reapertura de este primer editor: no se relaja automáticamente la restricción de agrupación verificada.
+La inspección selecciona por defecto el primer objeto compatible con fragmentos, evitando el contenedor original cuyas cadenas quedaron vacías tras una sustitución. La salida nueva mantiene los segmentos en un único BT/ET. La entrega inicial de 2C no reabría resultados de varias líneas. [La fase 3A](PHASE3_MANAGED_PARAGRAPHS.md) añade recuperación persistente con verificación de agrupación, fuentes y posiciones nativas.
 
 `ParagraphEditorIntegrationTests` cubre conservación de estilos/procedencias, selección en texto repetido, corrección de grafemas no codificables, historial del borrador, una única entrada de documento, Deshacer/Rehacer y rechazos sin alterar Undo/Redo/Revision/Modified. `--composition-edit-smoke references/Mythlix-Documento-Tecnico.pdf` verifica la ventana real: fuentes explícitas, aceptación obligatoria, invalidación al editar, cancelar sin efectos, aplicar texto mixto, cierre y Deshacer/Rehacer. Genera `/tmp/mythlix-composition-editor.png` para inspección de la ventana. La prueba usa un PDF temporal controlado.
 
 Validación de la integración: compilación sin errores ni advertencias; **264 pruebas aprobadas**. La prueba de ventana `--composition-edit-smoke` pasa, incluido el evento síncrono de cambio del TextBox y la conservación del fragmento en negrita después de guardar. La captura de la ventana se revisó visualmente.
+
+La continuación actual está documentada en [Fase 3A: reapertura de composiciones propias](PHASE3_MANAGED_PARAGRAPHS.md).

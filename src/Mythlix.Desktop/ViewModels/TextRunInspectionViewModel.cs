@@ -36,7 +36,7 @@ public sealed partial class WorkspaceViewModel {
   foreach(var block in report.Blocks) InspectedTextBlocks.Add(block);
   TextInspectionDiagnostics=string.Join(Environment.NewLine,report.PageDiagnostics.Select(d=>d.Message));
   TextInspectionStatus=$"{report.Blocks.Length} bloques · solo lectura. " +
-   (report.NativeAnalysisSupported ? "Seleccione un bloque de una línea para editar su borrador." : "Hay contenido fuera del alcance del análisis nativo.");
+   (report.NativeAnalysisSupported ? "Seleccione un bloque de una línea o una composición guardada para editar su borrador." : "Hay contenido fuera del alcance del análisis nativo.");
   if(SelectedOriginal is {} original) SyncInspectionSelection(original);
   else {SelectedInspectedBlock=InspectedTextBlocks.FirstOrDefault(b=>b.NativeAnalysisSupported && !b.Runs.IsEmpty)??InspectedTextBlocks.FirstOrDefault();TextInspectionMatch="";}
  });

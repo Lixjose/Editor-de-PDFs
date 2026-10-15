@@ -24,8 +24,9 @@ internal static class ParagraphCompositionWriter {
   Require(original.Length>0,"El objeto original ya no existe.");
   var liveSources=original.SelectMany(r=>r.Run.Sources.Select(s=>s.Source)).Distinct().ToArray();
   Require(sources.Length==liveSources.Length && sources.All(liveSources.Contains),"El inventario está incompleto o cambió su contenido/huella.");
-  Require(original.All(r=>Math.Abs(r.BaselineY-original[0].BaselineY)<0.01),"El primer escritor requiere un objeto original de una sola línea.");
-  var metrics=NativeWinAnsiEncodingResolver.Create(page,analysis);
+  var eligibility=ManagedParagraphs.Inspect(page,geometry,analysis,first.BlockId);
+  Require(eligibility.IsSupported,string.Join(" ",eligibility.Diagnostics.Select(d=>d.Message)));
+  var metrics=NativeWinAnsiEncodingResolver.Create(page,analysis,[draft.EmptyStyle.Font]);
   var canonical=ParagraphComposer.Compose(draft,plan.Options,metrics);
   Require(Equivalent(plan,canonical),"El plan, las métricas o los recursos cambiaron; recomponga antes de confirmar.");
   var bounds=plan.Options.Bounds;

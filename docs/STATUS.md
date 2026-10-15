@@ -3,7 +3,7 @@
 ## Implementado
 
 - Solución .NET 10 con Core, Infrastructure, Desktop y pruebas xUnit.
-- Edición inicial de texto mixto: borrador con estilos conservados, composición revisable, confirmación transaccional y Deshacer/Rehacer. Requiere un objeto original compatible de una línea, WinAnsi/Type1 estándar y área libre de colisiones/fondos dibujados. Véase [composición compartida 2A–2C](text-editing/PHASE2_COMPOSITION.md).
+- Edición inicial de texto mixto: borrador con estilos conservados, composición revisable, confirmación transaccional y Deshacer/Rehacer. Admite objetos originales compatibles de una línea y reapertura de composiciones propias multilínea verificadas; requiere WinAnsi/Type1 estándar y área libre de colisiones/fondos dibujados. Véase [composición compartida 2A–2C](text-editing/PHASE2_COMPOSITION.md).
 - Interfaz Avalonia inspirada en los adjuntos, pestañas y paneles redimensionables.
 - Apertura de varios PDF, renderizado local bajo demanda y miniatura de página actual.
 - Navegación, zoom, extracción/copiar texto y búsqueda por páginas.

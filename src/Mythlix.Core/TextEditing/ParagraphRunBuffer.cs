@@ -57,6 +57,9 @@ public sealed class ParagraphRunBuffer {
   return new(copy,first.Style,anchor,default);
  }
 
+ /// <summary>Restore an explicit empty-line writing style without discarding the complete source inventory.</summary>
+ public ParagraphRunBuffer WithEmptyStyle(PdfRunStyle style)=>new(Runs,style,EmptyAnchor,OriginalSources);
+
  public RunEditResult InsertText(int offset,string text,IFontEncodingResolver resolver) => ReplaceRange(new(offset,0),text,resolver);
  public RunEditResult PasteText(int offset,string text,IFontEncodingResolver resolver) => InsertText(offset,text,resolver);
  public RunEditResult DeleteRange(TextRange range,IFontEncodingResolver resolver) => ReplaceRange(range,"",resolver);
