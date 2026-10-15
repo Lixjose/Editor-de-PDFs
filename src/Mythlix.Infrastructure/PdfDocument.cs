@@ -55,6 +55,9 @@ public sealed class PdfDocumentSession : IPdfDocument, IContentEditor, ISearchab
   if(!analysis.IsSupported) throw new InvalidOperationException("La página no admite validación WinAnsi nativa: " + analysis.Diagnostics[0].Code);
   return TextEditing.NativeWinAnsiEncodingResolver.Create(document.Pages[page-1],analysis);
  }
+ /// <summary>Resource-scoped metric snapshot for the shared WinAnsi compositor.</summary>
+ public Mythlix.Core.TextEditing.IRunMetricsProvider CreateRunMetricsProvider(int page, long revision) =>
+  (Mythlix.Core.TextEditing.IRunMetricsProvider)CreateRunEncodingResolver(page,revision);
  public TextAnalysis AnalyzeText(int page) => TextEditing.OriginalTextEditor.Analyze(document.Pages[page-1],GetPageGeometry(page));
  public void ReplaceText(int page,OriginalTextBlock block,string replacement,double fontSize) =>
   ReplaceText(page, block, new TextEditOptions(replacement, fontSize, Strict: true));

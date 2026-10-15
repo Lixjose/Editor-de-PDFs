@@ -157,3 +157,5 @@ El ViewModel comprueba documento/página/revisión antes de publicar un resultad
 Pruebas `TextRunInspectionTests`: agrupación por objeto, estilos mixtos, compatibilidad anterior, coincidencia por contexto/huella, rechazo de vínculos con respaldo, diagnósticos locales/globales, inventario incompleto, capas propias y conservación de píxeles en páginas compartidas. La prueba de ventana `--text-inspection-smoke references/Mythlix-Documento-Tecnico.pdf` verifica comandos, ausencia de cambios de historial/revisión durante la consulta y limpieza por cambio de contexto. El cambio de revisión dentro de esa prueba es una acción explícita del diagnóstico, no del adaptador.
 
 Los pasos 1A–1D dejan lista la base de estilos mixtos. El siguiente trabajo es definir e implementar la composición compartida (métricas/glifos y geometría), seguida del commit transaccional y sus pruebas visuales. Todavía no se ofrece edición y guardado de párrafos mixtos en la interfaz.
+
+La continuación está documentada en [Fase 2: composición compartida](PHASE2_COMPOSITION.md). La entrega 2A incorpora el compositor métrico; el adaptador de glifos y el commit permanecen pendientes.
