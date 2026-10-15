@@ -63,9 +63,14 @@ public sealed partial class WorkspaceViewModel : ObservableObject, IDisposable {
   var text = await renderer.ExtractTextAsync(doc.WorkingPath, CurrentPage, CancellationToken.None);
   if(state.Text.Blocks.Count == 0 && !string.IsNullOrWhiteSpace(text)) {
    try {
-    var tsv = await poppler.ExtractTsvAsync(doc.WorkingPath, CurrentPage, CancellationToken.None);
-    var vectorAnalysis = Mythlix.Infrastructure.TextEditing.VectorTextExtractor.Extract(tsv, CurrentPage, state.Geometry);
+    var xml = await poppler.ExtractXmlAsync(doc.WorkingPath, CurrentPage, CancellationToken.None);
+    var vectorAnalysis = Mythlix.Infrastructure.TextEditing.VectorTextExtractor.ExtractFromXml(xml, CurrentPage, state.Geometry);
     if(vectorAnalysis.Blocks.Count > 0) state = (state.Geometry, state.Objects, vectorAnalysis);
+    else {
+     var tsv = await poppler.ExtractTsvAsync(doc.WorkingPath, CurrentPage, CancellationToken.None);
+     vectorAnalysis = Mythlix.Infrastructure.TextEditing.VectorTextExtractor.Extract(tsv, CurrentPage, state.Geometry);
+     if(vectorAnalysis.Blocks.Count > 0) state = (state.Geometry, state.Objects, vectorAnalysis);
+    }
    } catch {}
   }
   var old = PageImage; PageImage = new Bitmap(new MemoryStream(png)); old?.Dispose();

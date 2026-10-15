@@ -77,15 +77,15 @@ public sealed class PdfDocumentSession : IPdfDocument, IContentEditor, ISearchab
     Kind = GraphicKind.Text,
     X = textX,
     Y = textY,
-    Width = Math.Clamp(Math.Max(block.Bounds.Width, options.MaxWidth ?? 100), 4, geometry.Width - textX),
+    Width = Math.Clamp(Math.Max(block.Bounds.Width + 24, options.MaxWidth ?? 100), 4, geometry.Width - textX),
     Height = Math.Clamp(Math.Max(block.Bounds.Height * 2, options.FontSize * 2), 4, geometry.Height - textY),
     Text = options.Text,
     FontSize = options.FontSize,
-    Color = string.IsNullOrWhiteSpace(options.Color) ? "#000000" : options.Color,
+    Color = string.IsNullOrWhiteSpace(options.Color) ? block.Color : options.Color,
     Bold = options.Bold,
     Italic = options.Italic,
     Alignment = options.Alignment,
-    FontFamily = string.IsNullOrWhiteSpace(options.FontFamily) ? "Liberation Sans" : options.FontFamily,
+    FontFamily = string.IsNullOrWhiteSpace(options.FontFamily) || options.FontFamily == "Conservar fuente" ? block.FontName : options.FontFamily,
     StrokeWidth = 0
    };
    currentGraphics.Add(textObj);

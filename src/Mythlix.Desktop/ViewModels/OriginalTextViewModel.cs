@@ -56,11 +56,11 @@ public sealed partial class WorkspaceViewModel {
  [RelayCommand] private Task ApplyOriginalAsync()=>ReplaceOriginalWithOptionsAsync(new TextEditOptions(
   Text: OriginalDraftText,
   FontSize: OriginalDraftSize,
-  Color: string.IsNullOrWhiteSpace(OriginalDraftColor) ? "#000000" : OriginalDraftColor,
+  Color: string.IsNullOrWhiteSpace(OriginalDraftColor) ? (SelectedOriginal?.Color ?? "#000000") : OriginalDraftColor,
   Bold: OriginalDraftBold,
   Italic: OriginalDraftItalic,
   Alignment: OriginalDraftAlignmentIndex switch { 1 => TextAlignment.Center, 2 => TextAlignment.Right, _ => TextAlignment.Left },
-  FontFamily: OriginalDraftFontFamily is "Conservar fuente" or "" ? null : OriginalDraftFontFamily,
+  FontFamily: OriginalDraftFontFamily is "Conservar fuente" or "" ? SelectedOriginal?.FontName : OriginalDraftFontFamily,
   Strict: false
  ));
  [RelayCommand] private Task DeleteOriginalAsync()=>ReplaceOriginalAsync("",OriginalDraftSize);

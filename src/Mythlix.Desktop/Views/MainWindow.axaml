@@ -58,15 +58,18 @@
      <Grid Width="{Binding DisplayWidth}" Height="{Binding DisplayHeight}" IsVisible="{Binding !IsEmpty}" VerticalAlignment="Top" HorizontalAlignment="Center">
       <controls:PageCanvas x:Name="PdfCanvas" Workspace="{Binding}" Width="{Binding DisplayWidth}" Height="{Binding DisplayHeight}"/>
       <Canvas x:Name="InlineEditLayer" IsHitTestVisible="True">
-       <Border x:Name="InlineEditBorder" IsVisible="False" Background="#1E1E24" BorderBrush="#4F46E5" BorderThickness="1.5" CornerRadius="4" BoxShadow="0 4 16 0 #77000000" Padding="4">
-        <Grid RowDefinitions="*,Auto" MinWidth="180">
-         <TextBox x:Name="InlineEditText" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="36" FontSize="13" Background="#141417" BorderBrush="#343538" CornerRadius="3" Foreground="#FFFFFF" Padding="6,4" KeyDown="InlineTextKeyDown"/>
-         <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="4" Margin="0,4,0,0">
-          <Button Content="✓ Guardar" x:Name="InlineEditApply" Click="InlineApplyClick" Classes="primary" Padding="8,2" FontSize="11"/>
-          <Button Content="✕" x:Name="InlineEditCancel" Click="InlineCancelClick" Padding="6,2" FontSize="11" ToolTip.Tip="Cancelar (Esc)"/>
-         </StackPanel>
-        </Grid>
-       </Border>
+       <TextBox x:Name="DirectEditor"
+                IsVisible="False"
+                AcceptsReturn="True"
+                Background="#FAFFFFFF"
+                Foreground="#111827"
+                CaretBrush="#4F46E5"
+                BorderBrush="#4F46E5"
+                BorderThickness="1.5"
+                CornerRadius="2"
+                Padding="3,1"
+                KeyDown="DirectEditorKeyDown"
+                LostFocus="DirectEditorLostFocus"/>
       </Canvas>
      </Grid>
      <StackPanel IsVisible="{Binding IsEmpty}" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="14"><TextBlock Text="Tu espacio de documentos" FontSize="24" FontWeight="SemiBold"/><TextBlock Text="Edición local · Tu documento permanece en tu equipo" Foreground="#918FA1"/><Button Content="Abrir PDF" Click="OpenClick" Classes="primary" HorizontalAlignment="Center"/></StackPanel>

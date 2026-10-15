@@ -116,5 +116,42 @@ public sealed class OriginalTextEditingTests:IDisposable {
   var extracted = await renderer.ExtractTextAsync(outPath, 1, CancellationToken.None);
   Assert.Contains("Texto editado directamente sin OCR en LibreOffice", extracted);
  }
+ [Fact] public void PdfSharpSupportsMontserratOtfFont() {
+  EmbeddedFontResolver.EnsureInitialized();
+  var montserratPath = "/usr/share/fonts/julietaula-montserrat-fonts/Montserrat-Regular.otf";
+  if(!File.Exists(montserratPath)) return;
+  using var doc = new PdfDocument();
+  var page = doc.AddPage();
+  using var gfx = PdfSharp.Drawing.XGraphics.FromPdfPage(page);
+  var font = new PdfSharp.Drawing.XFont("Montserrat", 12);
+  gfx.DrawString("Test Montserrat", font, PdfSharp.Drawing.XBrushes.Black, new PdfSharp.Drawing.XPoint(100, 100));
+  Assert.NotNull(font);
+ }
+ [Fact] public void VectorTextExtractorExtractsExactFontFamilyAndSizeFromXml() {
+  var sampleXml = """
+  <?xml version="1.0" encoding="UTF-8"?>
+  <pdf2xml producer="poppler" version="26.01.0">
+  <page number="1" position="absolute" top="0" left="0" height="792" width="612">
+    <fontspec id="0" size="10" family="ABCDEF+Montserrat" color="#1a202c"/>
+    <fontspec id="1" size="18" family="Montserrat-Bold" color="#000000"/>
+    <text top="50" left="60" width="220" height="12" font="0">Párrafo con tipografía Montserrat</text>
+    <text top="80" left="60" width="180" height="20" font="1"><b>Título en Negrita</b></text>
+  </page>
+  </pdf2xml>
+  """;
+  var analysis = Mythlix.Infrastructure.TextEditing.VectorTextExtractor.ExtractFromXml(sampleXml, 1, new PageGeometry(612, 792, 0));
+  Assert.Equal(2, analysis.Blocks.Count);
+
+  var first = analysis.Blocks[0];
+  Assert.Equal("Montserrat", first.FontName);
+  Assert.Equal(10, first.FontSize);
+  Assert.Equal("#1a202c", first.Color);
+  Assert.False(first.Bold);
+
+  var second = analysis.Blocks[1];
+  Assert.Equal("Montserrat", second.FontName);
+  Assert.Equal(18, second.FontSize);
+  Assert.True(second.Bold);
+ }
  public void Dispose()=>Directory.Delete(directory,true);
 }

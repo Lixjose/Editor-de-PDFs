@@ -86,7 +86,10 @@ internal static class GraphicLayerWriter {
     var style = (item.Bold ? XFontStyleEx.Bold : XFontStyleEx.Regular) | (item.Italic ? XFontStyleEx.Italic : XFontStyleEx.Regular);
     var family = string.IsNullOrWhiteSpace(item.FontFamily) ? "Liberation Sans" : item.FontFamily;
     var font=new XFont(family,item.FontSize,style,new XPdfFontOptions(PdfFontEncoding.Unicode));
-    var state=graphics.Save(); graphics.IntersectClip(rectangle);
+    var measured = graphics.MeasureString(item.Text, font);
+    var drawWidth = item.Text.Contains('\n') ? Math.Max(item.Width, measured.Width + 12) : Math.Max(item.Width, measured.Width + 24);
+    var drawHeight = Math.Max(item.Height, measured.Height * 2.0);
+    var drawRect = new XRect(item.X, item.Y, drawWidth, drawHeight);
     var formatter = new XTextFormatter(graphics) {
      Alignment = item.Alignment switch {
       TextAlignment.Center => XParagraphAlignment.Center,
@@ -95,8 +98,8 @@ internal static class GraphicLayerWriter {
       _ => XParagraphAlignment.Left
      }
     };
-    formatter.DrawString(item.Text,font,new XSolidBrush(color),rectangle,XStringFormats.TopLeft);
-    graphics.Restore(state); break;
+    formatter.DrawString(item.Text,font,new XSolidBrush(color),drawRect,XStringFormats.TopLeft);
+    break;
    case GraphicKind.Image:
     using(var memory=new MemoryStream(item.ImageData!,0,item.ImageData!.Length,false,true))
     using(var image=XImage.FromStream(memory)) {

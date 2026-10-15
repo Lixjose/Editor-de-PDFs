@@ -14,7 +14,7 @@ public partial class MainWindow : Window {
   PdfCanvas.TextDoubleClicked += OnTextDoubleClicked;
   PdfCanvas.GraphicTextDoubleClicked += OnGraphicTextDoubleClicked;
   vm.PropertyChanged+=(_,e)=>{
-   if(e.PropertyName is nameof(vm.CurrentPage) or nameof(vm.PageImage) or nameof(vm.Selected)) InlineEditBorder.IsVisible = false;
+   if(e.PropertyName is nameof(vm.CurrentPage) or nameof(vm.PageImage) or nameof(vm.Selected)) DirectEditor.IsVisible = false;
    if(autoFit && e.PropertyName is nameof(vm.PageImage) or nameof(vm.Geometry))FitPageToView();
   };
   Viewport.PropertyChanged+=(_,e)=>{if(autoFit && e.Property==BoundsProperty)FitPageToView();};
@@ -310,44 +310,62 @@ public partial class MainWindow : Window {
   });
   await vm.InsertImageAsync(bytes,ratio);
  });
+ bool isDirectCanceling;
  void OnTextDoubleClicked(Mythlix.Core.OriginalTextBlock block, Rect rect) {
-  Canvas.SetLeft(InlineEditBorder, Math.Clamp(rect.X - 4, 0, Math.Max(0, vm.DisplayWidth - 200)));
-  Canvas.SetTop(InlineEditBorder, Math.Clamp(rect.Y - 4, 0, Math.Max(0, vm.DisplayHeight - 80)));
-  InlineEditBorder.Width = Math.Clamp(rect.Width + 28, 200, Math.Max(200, vm.DisplayWidth - 20));
-  InlineEditText.Text = block.Text;
-  InlineEditBorder.IsVisible = true;
-  InlineEditText.Focus();
-  InlineEditText.SelectAll();
+  isDirectCanceling = false;
+  var scale = PdfCanvas.Bounds.Width / Math.Max(1, vm.Geometry.DisplayWidth);
+  Canvas.SetLeft(DirectEditor, Math.Clamp(rect.X - 3, 0, Math.Max(0, vm.DisplayWidth - 40)));
+  Canvas.SetTop(DirectEditor, Math.Clamp(rect.Y - 2, 0, Math.Max(0, vm.DisplayHeight - 20)));
+  DirectEditor.Width = Math.Clamp(rect.Width + 16, 60, Math.Max(60, vm.DisplayWidth - rect.X));
+  DirectEditor.Height = Math.Clamp(rect.Height + 4, 24, Math.Max(24, vm.DisplayHeight - rect.Y));
+  DirectEditor.FontSize = Math.Max(10, Math.Round(block.FontSize * scale, 1));
+  DirectEditor.Text = block.Text;
+  DirectEditor.IsVisible = true;
+  DirectEditor.Focus();
+  DirectEditor.SelectAll();
  }
  void OnGraphicTextDoubleClicked(Mythlix.Core.GraphicObject obj, Rect rect) {
-  Canvas.SetLeft(InlineEditBorder, Math.Clamp(rect.X - 4, 0, Math.Max(0, vm.DisplayWidth - 200)));
-  Canvas.SetTop(InlineEditBorder, Math.Clamp(rect.Y - 4, 0, Math.Max(0, vm.DisplayHeight - 80)));
-  InlineEditBorder.Width = Math.Clamp(rect.Width + 28, 200, Math.Max(200, vm.DisplayWidth - 20));
-  InlineEditText.Text = obj.Text;
-  InlineEditBorder.IsVisible = true;
-  InlineEditText.Focus();
-  InlineEditText.SelectAll();
+  isDirectCanceling = false;
+  var scale = PdfCanvas.Bounds.Width / Math.Max(1, vm.Geometry.DisplayWidth);
+  Canvas.SetLeft(DirectEditor, Math.Clamp(rect.X - 3, 0, Math.Max(0, vm.DisplayWidth - 40)));
+  Canvas.SetTop(DirectEditor, Math.Clamp(rect.Y - 2, 0, Math.Max(0, vm.DisplayHeight - 20)));
+  DirectEditor.Width = Math.Clamp(rect.Width + 16, 60, Math.Max(60, vm.DisplayWidth - rect.X));
+  DirectEditor.Height = Math.Clamp(rect.Height + 4, 24, Math.Max(24, vm.DisplayHeight - rect.Y));
+  DirectEditor.FontSize = Math.Max(10, Math.Round(obj.FontSize * scale, 1));
+  DirectEditor.Text = obj.Text;
+  DirectEditor.IsVisible = true;
+  DirectEditor.Focus();
+  DirectEditor.SelectAll();
  }
- void InlineTextKeyDown(object? sender, KeyEventArgs e) {
+ void DirectEditorKeyDown(object? sender, KeyEventArgs e) {
   if(e.Key == Key.Enter && !e.KeyModifiers.HasFlag(KeyModifiers.Shift)) {
-   InlineApplyClick(sender, e);
    e.Handled = true;
+   _ = CommitDirectEditAsync();
   } else if(e.Key == Key.Escape) {
-   InlineCancelClick(sender, e);
    e.Handled = true;
+   isDirectCanceling = true;
+   DirectEditor.IsVisible = false;
   }
  }
- async void InlineApplyClick(object? sender, RoutedEventArgs e) {
-  InlineEditBorder.IsVisible = false;
+ void DirectEditorLostFocus(object? sender, RoutedEventArgs e) {
+  if(!isDirectCanceling && DirectEditor.IsVisible) {
+   _ = CommitDirectEditAsync();
+  }
+ }
+ async Task CommitDirectEditAsync() {
+  if(isDirectCanceling || !DirectEditor.IsVisible) return;
+  DirectEditor.IsVisible = false;
+  var newText = DirectEditor.Text ?? "";
   if(vm.SelectedOriginal is not null) {
-   vm.OriginalDraftText = InlineEditText.Text ?? "";
-   await vm.ApplyOriginalCommand.ExecuteAsync(null);
+   if(newText != vm.SelectedOriginal.Text) {
+    vm.OriginalDraftText = newText;
+    await vm.ApplyOriginalCommand.ExecuteAsync(null);
+   }
   } else if(vm.SelectedGraphic is not null) {
-   vm.ObjectText = InlineEditText.Text ?? "";
-   await vm.ApplyGraphicCommand.ExecuteAsync(null);
+   if(newText != vm.SelectedGraphic.Text) {
+    vm.ObjectText = newText;
+    await vm.ApplyGraphicCommand.ExecuteAsync(null);
+   }
   }
- }
- void InlineCancelClick(object? sender, RoutedEventArgs e) {
-  InlineEditBorder.IsVisible = false;
  }
 }
