@@ -177,7 +177,7 @@ internal static class NativeRunExtractor {
  }
  static void Fail(string code,string message) => throw new Unsupported(code,message);
  static string Hash(ReadOnlySpan<byte> bytes) => Convert.ToHexString(SHA256.HashData(bytes));
- static (PdfDictionary? Resources,string Scope) Resources(PdfPage page) {
+ internal static (PdfDictionary? Resources,string Scope) Resources(PdfPage page) {
   PdfDictionary? node=page;
   for(var depth=0;node is not null && depth<64;depth++,node=node.Elements.GetDictionary("/Parent")) {
    if(node.Elements.GetDictionary("/Resources") is {} resources)
@@ -185,7 +185,7 @@ internal static class NativeRunExtractor {
   }
   return (null,"resources:missing");
  }
- static (string Family,double[] Widths) ReadFont(PdfDictionary? font) {
+ internal static (string Family,double[] Widths) ReadFont(PdfDictionary? font) {
   if(font is null || font.Elements.GetName("/Subtype")!="/Type1" || font.Elements.ContainsKey("/ToUnicode"))
    Fail("Font","Fuente ausente, CID o codificación fuera del alcance.");
   if(font!.Elements.GetName("/Encoding")!="/WinAnsiEncoding") Fail("Encoding","Solo WinAnsi explícito está habilitado.");

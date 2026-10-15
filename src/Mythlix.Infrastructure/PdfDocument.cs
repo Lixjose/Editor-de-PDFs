@@ -43,6 +43,12 @@ public sealed class PdfDocumentSession : IPdfDocument, IContentEditor, ISearchab
   return TextEditing.NativeRunExtractor.Analyze(document.Pages[page-1],GetPageGeometry(page),
    new Mythlix.Core.TextEditing.TextDocumentContext(textDocumentId,page,revision));
  }
+ /// <summary>Encoding snapshot for validated native runs; no document writes or fallback fonts.</summary>
+ public Mythlix.Core.TextEditing.IFontEncodingResolver CreateRunEncodingResolver(int page, long revision) {
+  var analysis=AnalyzeTextRuns(page,revision);
+  if(!analysis.IsSupported) throw new InvalidOperationException("La página no admite validación WinAnsi nativa: " + analysis.Diagnostics[0].Code);
+  return TextEditing.NativeWinAnsiEncodingResolver.Create(document.Pages[page-1],analysis);
+ }
  public TextAnalysis AnalyzeText(int page) => TextEditing.OriginalTextEditor.Analyze(document.Pages[page-1],GetPageGeometry(page));
  public void ReplaceText(int page,OriginalTextBlock block,string replacement,double fontSize) =>
   ReplaceText(page, block, new TextEditOptions(replacement, fontSize, Strict: true));

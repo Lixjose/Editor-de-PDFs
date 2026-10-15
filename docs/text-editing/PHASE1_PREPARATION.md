@@ -1,6 +1,6 @@
 # Preparación de fase 1: fragmentos de estilo con procedencia
 
-Estado: pasos 1A y 1B implementados (contratos base y extracción nativa de solo lectura); el nuevo modelo no está activado en el motor ni en la interfaz.
+Estado: pasos 1A, 1B y 1C implementados (contratos, extracción y edición del borrador); el nuevo modelo no está activado en el motor ni en la interfaz.
 Esta fase es distinta de la entrega histórica descrita en `../TEXT_ENGINE_PHASE1.md`.
 
 ## Objetivo y alcance
@@ -119,3 +119,24 @@ Un operador o estado no compatible rechaza la página completa con un diagnósti
 Pruebas `NativeRunExtractionTests`: estilos mixtos, tamaños decimales, estado heredado, recursos heredados, cadenas escapadas y hexadecimales, WinAnsi, TJ y sus ajustes, avances y líneas base, fuentes/codificaciones no compatibles, contenido inválido, streams comprimidos/compartidos y comparación de píxeles tras analizar y guardar. Las pruebas históricas de preparación continúan comprobando que el escritor anterior no declare editables objetos mixtos.
 
 El siguiente paso es 1C: buffer de mutaciones y validación WinAnsi sobre estos contratos. La composición compartida y la escritura mixta todavía no están implementadas.
+
+
+## Resultado del paso 1C
+
+`ParagraphRunBuffer` es un borrador inmutable en Core. `InsertText`, `PasteText`, `DeleteRange`, `ReplaceRange` y `SplitRunAt` devuelven `RunEditResult` sin modificar el búfer anterior ni la sesión PDF. La división de fragmento no inserta un salto; los saltos duros se introducen explícitamente como texto. El adaptador futuro deberá proporcionar únicamente los fragmentos del párrafo seleccionado: `FromRuns` no reconoce párrafos ni inventa separadores.
+
+Las posiciones de edición son UTF-16 y se validan contra grafemas Unicode mediante `StringInfo`, incluidos pares sustitutos, marcas combinadas, secuencias emoji y CRLF. UTF-16 inválido o un rango que corte un grafema devuelve el borrador anterior sin aplicar la operación. Los espacios y saltos introducidos se conservan literalmente.
+
+La inserción hereda el estilo izquierdo en una frontera y el primero al comienzo. Un borrador vacío mantiene estilo y ancla explícitos. Los insertados solo tienen ancla, no bytes originales ficticios. Al recortar texto original se estrecha su rango de texto fuente y se mantiene el rango del token PDF contenedor, porque los escapes impiden deducir offsets de bytes a partir de índices UTF-16.
+
+Los fragmentos originales adyacentes de estilo igual se fusionan manteniendo todas sus procedencias. Los insertados solo se fusionan cuando comparten exactamente la misma ancla; anclas distintas permanecen separadas. El inventario `OriginalSources` conserva también las procedencias borradas para la validación futura de revisión y huellas. El buffer rechaza mapeos de fuente ambiguos o no exactos; no afirma soportar ligaduras N:M.
+
+`IFontEncodingResolver` vive en Core. `PdfDocumentSession.CreateRunEncodingResolver(page, revision)` crea una instantánea inmutable de los recursos usados por la extracción nativa compatible. `NativeWinAnsiEncodingResolver` consulta el ámbito/recurso real y copia sus tablas de anchos, en lugar de decidir por nombre de familia. No acepta otra página/revisión/recurso, controles ni códigos o anchos no compatibles; no emplea fallback de fuente ni de codificación. Si hay un error devuelve diagnósticos y cero bytes, nunca una codificación parcial.
+
+La validación del buffer trata CR, LF y CRLF como saltos de estructura, no como bytes de una cadena PDF. Verifica la identidad de fuente incluso en fragmentos que solo contienen saltos y párrafos vacíos. Los caracteres no codificables pueden permanecer en el borrador para corregirlos: `Applied=true` indica que cambió el borrador, mientras `IsEncodingValid=false` informa de errores. Este indicador no autoriza un commit ni comprueba composición, colisiones o revisión viva del documento.
+
+La instantánea del resolvedor no se actualiza si cambia la sesión PDF. La confirmación posterior deberá comprobar revisión, huellas y geometría de nuevo; esta etapa no escribe streams ni modifica el historial. No hay controles nuevos activados.
+
+`ParagraphRunBufferTests` comprueba herencia de estilos, reemplazos entre estilos, procedencias recortadas y fusionadas, inventario de texto borrado, párrafo vacío, pegado con espacios y saltos, fronteras de grafemas, corrección de texto no codificable, fuentes/revisiones ajenas, anchos declarados incompletos y conservación del documento original.
+
+El siguiente paso es 1D: adaptador de solo lectura y diagnósticos por bloque para conectar esta base de forma controlada. La composición compartida y la escritura mixta siguen pendientes.
