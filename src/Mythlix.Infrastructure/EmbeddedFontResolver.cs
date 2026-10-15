@@ -19,10 +19,31 @@ internal sealed class EmbeddedFontResolver : IFontResolver {
     public static string CleanFamilyName(string familyName) {
         if(string.IsNullOrWhiteSpace(familyName)) return "Liberation Sans";
         var cleaned = Regex.Replace(familyName.TrimStart('/'), @"^[A-Z]{6}\+", "");
-        // Remove common style suffixes if attached directly to family
         cleaned = Regex.Replace(cleaned, @"-(Regular|Bold|Italic|BoldItalic|SemiBold|Medium|Light|Black|ExtraBold)$", "", RegexOptions.IgnoreCase);
         cleaned = Regex.Replace(cleaned, @",(Bold|Italic|Regular)$", "", RegexOptions.IgnoreCase);
-        return cleaned.Trim();
+        cleaned = cleaned.Trim();
+
+        if(cleaned.Contains("Times", StringComparison.OrdinalIgnoreCase) ||
+           cleaned.Contains("Roman", StringComparison.OrdinalIgnoreCase) ||
+           cleaned.Contains("Minion", StringComparison.OrdinalIgnoreCase) ||
+           cleaned.Contains("Garamond", StringComparison.OrdinalIgnoreCase) ||
+           cleaned.Contains("Serif", StringComparison.OrdinalIgnoreCase)) {
+            return "Liberation Serif";
+        }
+        if(cleaned.Contains("Courier", StringComparison.OrdinalIgnoreCase) ||
+           cleaned.Contains("Mono", StringComparison.OrdinalIgnoreCase)) {
+            return "Liberation Mono";
+        }
+        if(cleaned.Contains("Montserrat", StringComparison.OrdinalIgnoreCase)) {
+            return "Montserrat";
+        }
+        if(cleaned.Contains("Arial", StringComparison.OrdinalIgnoreCase) ||
+           cleaned.Contains("Helvetica", StringComparison.OrdinalIgnoreCase) ||
+           cleaned.Contains("Sans", StringComparison.OrdinalIgnoreCase)) {
+            return "Liberation Sans";
+        }
+
+        return cleaned;
     }
 
     public FontResolverInfo ResolveTypeface(string familyName, bool bold, bool italic) {

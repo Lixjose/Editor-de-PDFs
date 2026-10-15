@@ -14,15 +14,15 @@ public partial class MainWindow : Window {
  public MainWindow() {
   InitializeComponent(); DataContext=vm; Closing += OnClosing;
   PdfCanvas.TextDoubleClicked += OnTextDoubleClicked;
+  DirectEditor.TextChanged += (_,_) => { if(DirectEditor.IsVisible) GrowEditorToText(); };
   PdfCanvas.GraphicTextDoubleClicked += OnGraphicTextDoubleClicked;
   PdfCanvas.CanvasPointerPressed += OnCanvasPointerPressed;
   vm.PropertyChanged+=(_,e)=>{
    if(e.PropertyName is nameof(vm.CurrentPage) or nameof(vm.PageImage) or nameof(vm.Selected)) {
     DirectEditor.IsVisible = false;
-    FloatingFormatBar.IsVisible = false;
     vm.ActiveEditingOriginal = null;
    }
-   if(autoFit && e.PropertyName is nameof(vm.PageImage) or nameof(vm.Geometry))FitPageToView();
+   if(autoFit && e.PropertyName is nameof(vm.Selected))FitPageToView();
   };
   Viewport.PropertyChanged+=(_,e)=>{if(autoFit && e.Property==BoundsProperty)FitPageToView();};
   Opened += async (_,_) => {
@@ -296,7 +296,10 @@ public partial class MainWindow : Window {
  void FitPageClick(object? s,RoutedEventArgs e){autoFit=true;FitPageToView();}
  void FitPageToView(){
   if(vm.Selected is null || Viewport.Bounds.Width<=70 || Viewport.Bounds.Height<=82)return;
-  vm.Zoom=Math.Clamp(Math.Min((Viewport.Bounds.Width-68)/720,(Viewport.Bounds.Height-80)/(720*vm.Geometry.DisplayHeight/vm.Geometry.DisplayWidth))*100,25,300);
+  var targetZoom = Math.Clamp(Math.Min((Viewport.Bounds.Width-68)/720,(Viewport.Bounds.Height-80)/(720*vm.Geometry.DisplayHeight/vm.Geometry.DisplayWidth))*100,25,300);
+  if(Math.Abs(targetZoom - vm.Zoom) >= 2.0) {
+   vm.Zoom = targetZoom;
+  }
  }
  async void InsertImageClick(object? s,RoutedEventArgs e)=>await Execute(async()=> {
   if(vm.Selected is null) {vm.Status="Abra un PDF antes de insertar imágenes.";return;}
@@ -318,60 +321,42 @@ public partial class MainWindow : Window {
   await vm.InsertImageAsync(bytes,ratio);
  });
  bool isDirectCanceling;
+ bool isCommitting;
  Mythlix.Core.OriginalTextBlock? activeEditingOriginal;
  Mythlix.Core.GraphicObject? activeEditingGraphic;
- double currentEditFontSize = 12;
 
  void OnCanvasPointerPressed() {
-  if(DirectEditor.IsVisible) {
+  if(!isCommitting && DirectEditor.IsVisible) {
    _ = CommitDirectEditAsync();
   }
  }
 
- void OnFontMenuItemClick(object? sender, RoutedEventArgs e) {
-  if(sender is MenuItem mi && mi.Header is string fontName) {
-   FloatFontButton.Content = fontName;
-   try { DirectEditor.FontFamily = new FontFamily(fontName); } catch {}
-  }
- }
-
- void FloatSizeDecClick(object? sender, RoutedEventArgs e) {
-  currentEditFontSize = Math.Max(6, currentEditFontSize - 1);
-  UpdateEditFontSize();
- }
-
- void FloatSizeIncClick(object? sender, RoutedEventArgs e) {
-  currentEditFontSize = Math.Min(120, currentEditFontSize + 1);
-  UpdateEditFontSize();
- }
-
- void UpdateEditFontSize() {
-  FloatSizeText.Text = $"{currentEditFontSize:0.#} pt";
-  var scale = PdfCanvas.Bounds.Width / Math.Max(1, vm.Geometry.DisplayWidth);
-  DirectEditor.FontSize = Math.Max(8, Math.Round(currentEditFontSize * scale, 1));
- }
-
- void FloatBoldClick(object? sender, RoutedEventArgs e) {
-  DirectEditor.FontWeight = DirectEditor.FontWeight == Avalonia.Media.FontWeight.Bold ? Avalonia.Media.FontWeight.Normal : Avalonia.Media.FontWeight.Bold;
- }
-
- void FloatItalicClick(object? sender, RoutedEventArgs e) {
-  DirectEditor.FontStyle = DirectEditor.FontStyle == Avalonia.Media.FontStyle.Italic ? Avalonia.Media.FontStyle.Normal : Avalonia.Media.FontStyle.Italic;
- }
-
  void OnTextDoubleClicked(Mythlix.Core.OriginalTextBlock block, Rect rect) {
+  if(isCommitting) return;
   isDirectCanceling = false;
   activeEditingOriginal = block;
   activeEditingGraphic = null;
   vm.ActiveEditingOriginal = block;
 
   var scale = PdfCanvas.Bounds.Width / Math.Max(1, vm.Geometry.DisplayWidth);
-  Canvas.SetLeft(DirectEditor, Math.Clamp(rect.X - 3, 0, Math.Max(0, vm.DisplayWidth - 40)));
-  Canvas.SetTop(DirectEditor, Math.Clamp(rect.Y - 2, 0, Math.Max(0, vm.DisplayHeight - 20)));
-  DirectEditor.Width = Math.Clamp(rect.Width + 16, 60, Math.Max(60, vm.DisplayWidth - rect.X));
-  DirectEditor.Height = Math.Clamp(rect.Height + 6, 26, Math.Max(26, vm.DisplayHeight - rect.Y));
-  DirectEditor.FontSize = Math.Max(10, Math.Round(block.FontSize * scale, 1));
-  try { DirectEditor.FontFamily = new FontFamily(block.FontName); } catch {}
+  DirectEditor.TextWrapping = Avalonia.Media.TextWrapping.NoWrap;
+
+  var fontName = block.FontName ?? "Liberation Sans";
+  if(fontName.Contains("Times", StringComparison.OrdinalIgnoreCase) ||
+     fontName.Contains("Roman", StringComparison.OrdinalIgnoreCase) ||
+     fontName.Contains("Serif", StringComparison.OrdinalIgnoreCase) ||
+     fontName.Contains("Minion", StringComparison.OrdinalIgnoreCase) ||
+     fontName.Contains("Garamond", StringComparison.OrdinalIgnoreCase)) {
+   try { DirectEditor.FontFamily = new FontFamily("Liberation Serif, Times New Roman, serif"); } catch {}
+  } else if(fontName.Contains("Courier", StringComparison.OrdinalIgnoreCase) ||
+            fontName.Contains("Mono", StringComparison.OrdinalIgnoreCase)) {
+   try { DirectEditor.FontFamily = new FontFamily("Liberation Mono, Courier New, monospace"); } catch {}
+  } else if(fontName.Contains("Montserrat", StringComparison.OrdinalIgnoreCase)) {
+   try { DirectEditor.FontFamily = new FontFamily("Montserrat, sans-serif"); } catch {}
+  } else {
+   try { DirectEditor.FontFamily = new FontFamily("Liberation Sans, Arial, sans-serif"); } catch {}
+  }
+
   DirectEditor.FontWeight = block.Bold ? Avalonia.Media.FontWeight.Bold : Avalonia.Media.FontWeight.Normal;
   DirectEditor.FontStyle = block.Italic ? Avalonia.Media.FontStyle.Italic : Avalonia.Media.FontStyle.Normal;
   try {
@@ -380,33 +365,33 @@ public partial class MainWindow : Window {
   } catch {
    DirectEditor.Foreground = Brushes.Black;
   }
+  FitEditorToBox(block.Text, block.FontSize * scale, rect);
   DirectEditor.Text = block.Text;
   DirectEditor.IsVisible = true;
-
-  FloatFontButton.Content = string.IsNullOrWhiteSpace(block.FontName) ? "Liberation Sans" : block.FontName;
-  currentEditFontSize = block.FontSize > 0 ? block.FontSize : 12;
-  FloatSizeText.Text = $"{currentEditFontSize:0.#} pt";
-  Canvas.SetLeft(FloatingFormatBar, Math.Clamp(rect.X, 0, Math.Max(0, vm.DisplayWidth - 280)));
-  Canvas.SetTop(FloatingFormatBar, rect.Y > 38 ? rect.Y - 36 : rect.Y + rect.Height + 6);
-  FloatingFormatBar.IsVisible = true;
 
   DirectEditor.Focus();
   DirectEditor.SelectAll();
  }
 
  void OnGraphicTextDoubleClicked(Mythlix.Core.GraphicObject obj, Rect rect) {
+  if(isCommitting) return;
   isDirectCanceling = false;
   activeEditingOriginal = null;
   activeEditingGraphic = obj;
   vm.ActiveEditingOriginal = null;
 
   var scale = PdfCanvas.Bounds.Width / Math.Max(1, vm.Geometry.DisplayWidth);
-  Canvas.SetLeft(DirectEditor, Math.Clamp(rect.X - 3, 0, Math.Max(0, vm.DisplayWidth - 40)));
-  Canvas.SetTop(DirectEditor, Math.Clamp(rect.Y - 2, 0, Math.Max(0, vm.DisplayHeight - 20)));
-  DirectEditor.Width = Math.Clamp(rect.Width + 16, 60, Math.Max(60, vm.DisplayWidth - rect.X));
-  DirectEditor.Height = Math.Clamp(rect.Height + 6, 26, Math.Max(26, vm.DisplayHeight - rect.Y));
-  DirectEditor.FontSize = Math.Max(10, Math.Round(obj.FontSize * scale, 1));
-  try { DirectEditor.FontFamily = new FontFamily(string.IsNullOrWhiteSpace(obj.FontFamily) ? "Liberation Sans" : obj.FontFamily); } catch {}
+  DirectEditor.TextWrapping = obj.Text.Contains('\n') ? Avalonia.Media.TextWrapping.Wrap : Avalonia.Media.TextWrapping.NoWrap;
+
+  var fontName = string.IsNullOrWhiteSpace(obj.FontFamily) ? "Liberation Sans" : obj.FontFamily;
+  if(fontName.Contains("Times", StringComparison.OrdinalIgnoreCase) ||
+     fontName.Contains("Roman", StringComparison.OrdinalIgnoreCase) ||
+     fontName.Contains("Serif", StringComparison.OrdinalIgnoreCase)) {
+   try { DirectEditor.FontFamily = new FontFamily("Times New Roman, Liberation Serif, DejaVu Serif, FreeSerif, serif"); } catch {}
+  } else {
+   try { DirectEditor.FontFamily = new FontFamily($"{fontName}, Liberation Sans, Arial, DejaVu Sans, sans-serif"); } catch {}
+  }
+
   DirectEditor.FontWeight = obj.Bold ? Avalonia.Media.FontWeight.Bold : Avalonia.Media.FontWeight.Normal;
   DirectEditor.FontStyle = obj.Italic ? Avalonia.Media.FontStyle.Italic : Avalonia.Media.FontStyle.Normal;
   try {
@@ -415,18 +400,55 @@ public partial class MainWindow : Window {
   } catch {
    DirectEditor.Foreground = Brushes.Black;
   }
+  FitEditorToBox(obj.Text, obj.FontSize * scale, rect);
   DirectEditor.Text = obj.Text;
   DirectEditor.IsVisible = true;
 
-  FloatFontButton.Content = string.IsNullOrWhiteSpace(obj.FontFamily) ? "Liberation Sans" : obj.FontFamily;
-  currentEditFontSize = obj.FontSize > 0 ? obj.FontSize : 12;
-  FloatSizeText.Text = $"{currentEditFontSize:0.#} pt";
-  Canvas.SetLeft(FloatingFormatBar, Math.Clamp(rect.X, 0, Math.Max(0, vm.DisplayWidth - 280)));
-  Canvas.SetTop(FloatingFormatBar, rect.Y > 38 ? rect.Y - 36 : rect.Y + rect.Height + 6);
-  FloatingFormatBar.IsVisible = true;
-
   DirectEditor.Focus();
   DirectEditor.SelectAll();
+ }
+
+ // Border (1px each side) of the inline editor; the template padding is 0.
+ const double EditorChrome = 2;
+ Rect editorBox;
+
+ FormattedText MeasureEditorText(string text, double size) =>
+  new(string.IsNullOrEmpty(text) ? " " : text, System.Globalization.CultureInfo.CurrentCulture, FlowDirection.LeftToRight,
+   new Typeface(DirectEditor.FontFamily, DirectEditor.FontStyle, DirectEditor.FontWeight), size, Brushes.Black);
+
+ /// <summary>
+ /// Sizes the inline editor so the text keeps the original visual size: the font is never
+ /// enlarged beyond the PDF size and is shrunk if the substitute font is wider than the
+ /// original box. The box height follows the real line height so no scrollbar appears.
+ /// </summary>
+ void FitEditorToBox(string text, double desiredSize, Rect rect) {
+  editorBox = rect;
+  var size = Math.Max(1, desiredSize);
+  var measured = MeasureEditorText(text, size);
+  var textWidth = measured.WidthIncludingTrailingWhitespace;
+  if(rect.Width > 0 && textWidth > rect.Width) {
+   size = Math.Max(1, size * rect.Width / textWidth);
+   measured = MeasureEditorText(text, size);
+  }
+  DirectEditor.FontSize = size;
+  DirectEditor.MinHeight = 0;
+  DirectEditor.MinWidth = 0;
+  var height = Math.Max(rect.Height, measured.Height) + EditorChrome;
+  var width = Math.Max(rect.Width, measured.WidthIncludingTrailingWhitespace) + EditorChrome + 4;
+  Canvas.SetLeft(DirectEditor, rect.X - EditorChrome / 2);
+  // Center the line vertically over the original box so the text stays in place.
+  Canvas.SetTop(DirectEditor, Math.Max(0, rect.Y - (height - rect.Height) / 2));
+  DirectEditor.Width = width;
+  DirectEditor.Height = height;
+ }
+
+ /// <summary>Grows the editor while typing instead of scrolling, keeping the font size fixed.</summary>
+ void GrowEditorToText() {
+  var measured = MeasureEditorText(DirectEditor.Text ?? "", DirectEditor.FontSize);
+  var width = Math.Max(editorBox.Width, measured.WidthIncludingTrailingWhitespace) + EditorChrome + 4;
+  var height = Math.Max(editorBox.Height, measured.Height) + EditorChrome;
+  if(Math.Abs(width - DirectEditor.Width) > 0.5) DirectEditor.Width = width;
+  if(Math.Abs(height - DirectEditor.Height) > 0.5) DirectEditor.Height = height;
  }
 
  void DirectEditorKeyDown(object? sender, KeyEventArgs e) {
@@ -437,55 +459,39 @@ public partial class MainWindow : Window {
    e.Handled = true;
    isDirectCanceling = true;
    DirectEditor.IsVisible = false;
-   FloatingFormatBar.IsVisible = false;
    vm.ActiveEditingOriginal = null;
   }
  }
 
  void DirectEditorLostFocus(object? sender, RoutedEventArgs e) {
-  var focusManager = TopLevel.GetTopLevel(this)?.FocusManager;
-  var focused = focusManager?.GetFocusedElement() as Visual;
-  Visual? v = focused;
-  while(v != null) {
-   if(v == FloatingFormatBar) return;
-   v = v.GetVisualParent();
-  }
-  if(!isDirectCanceling && DirectEditor.IsVisible) {
+  if(!isCommitting && !isDirectCanceling && DirectEditor.IsVisible) {
    _ = CommitDirectEditAsync();
   }
  }
 
  async Task CommitDirectEditAsync() {
-  if(isDirectCanceling || !DirectEditor.IsVisible) return;
-  DirectEditor.IsVisible = false;
-  FloatingFormatBar.IsVisible = false;
-  var targetOrig = activeEditingOriginal;
-  var targetGraph = activeEditingGraphic;
-  activeEditingOriginal = null;
-  activeEditingGraphic = null;
-  vm.ActiveEditingOriginal = null;
+  if(isCommitting || isDirectCanceling || !DirectEditor.IsVisible) return;
+  isCommitting = true;
+  try {
+   DirectEditor.IsVisible = false;
+   var targetOrig = activeEditingOriginal;
+   var targetGraph = activeEditingGraphic;
+   activeEditingOriginal = null;
+   activeEditingGraphic = null;
+   vm.ActiveEditingOriginal = null;
 
-  var newText = DirectEditor.Text ?? "";
-  var fontFam = FloatFontButton.Content as string;
-  var fontSize = currentEditFontSize;
-  var isBold = DirectEditor.FontWeight == Avalonia.Media.FontWeight.Bold;
-  var isItalic = DirectEditor.FontStyle == Avalonia.Media.FontStyle.Italic;
-
-  if(targetOrig is not null) {
-   var textChanged = newText != targetOrig.Text;
-   var fontChanged = !string.IsNullOrWhiteSpace(fontFam) && !string.Equals(fontFam, targetOrig.FontName, StringComparison.OrdinalIgnoreCase);
-   var sizeChanged = Math.Abs(fontSize - targetOrig.FontSize) > 0.1;
-   var boldChanged = isBold != targetOrig.Bold;
-   var italicChanged = isItalic != targetOrig.Italic;
-   if(textChanged || fontChanged || sizeChanged || boldChanged || italicChanged) {
-    var finalFont = fontChanged ? fontFam : targetOrig.FontName;
-    var finalSize = sizeChanged ? fontSize : targetOrig.FontSize;
-    await vm.CommitOriginalTextDirectAsync(targetOrig, newText, finalFont, finalSize, null, isBold, isItalic);
+   var newText = DirectEditor.Text ?? "";
+   if(targetOrig is not null) {
+    if(newText != targetOrig.Text) {
+     await vm.CommitOriginalTextDirectAsync(targetOrig, newText, targetOrig.FontName, targetOrig.FontSize, null, targetOrig.Bold, targetOrig.Italic);
+    }
+   } else if(targetGraph is not null) {
+    if(newText != targetGraph.Text) {
+     await vm.CommitGraphicTextDirectAsync(targetGraph, newText, targetGraph.FontSize, null, targetGraph.Bold, targetGraph.Italic);
+    }
    }
-  } else if(targetGraph is not null) {
-   if(newText != targetGraph.Text || Math.Abs(fontSize - targetGraph.FontSize) > 0.1 || isBold != targetGraph.Bold || isItalic != targetGraph.Italic) {
-    await vm.CommitGraphicTextDirectAsync(targetGraph, newText, fontSize, null, isBold, isItalic);
-   }
+  } finally {
+   isCommitting = false;
   }
  }
 }

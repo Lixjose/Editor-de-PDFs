@@ -18,10 +18,17 @@ public static class VectorTextExtractor {
                 ?? doc.Descendants("page").FirstOrDefault();
             if(pageElem is null) return new([], 0, "No se encontró la página especificada en el XML.");
 
+            double xmlWidth = double.TryParse(pageElem.Attribute("width")?.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out var xw) ? xw : geometry.Width;
+            double xmlHeight = double.TryParse(pageElem.Attribute("height")?.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out var xh) ? xh : geometry.Height;
+
+            double scaleX = xmlWidth > 0 && geometry.Width > 0 ? xmlWidth / geometry.Width : 1.0;
+            double scaleY = xmlHeight > 0 && geometry.Height > 0 ? xmlHeight / geometry.Height : 1.0;
+
             var fontSpecs = new Dictionary<string, FontSpec>();
             foreach(var fs in pageElem.Elements("fontspec")) {
                 var id = fs.Attribute("id")?.Value ?? "";
-                var size = double.TryParse(fs.Attribute("size")?.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out var sz) ? sz : 12.0;
+                var rawSize = double.TryParse(fs.Attribute("size")?.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out var sz) ? sz : 12.0;
+                var size = Math.Max(4, rawSize / scaleY);
                 var rawFamily = fs.Attribute("family")?.Value ?? "Liberation Sans";
                 var cleanFamily = EmbeddedFontResolver.CleanFamilyName(rawFamily);
                 var color = fs.Attribute("color")?.Value ?? "#000000";
@@ -35,14 +42,19 @@ public static class VectorTextExtractor {
                 var text = t.Value?.Trim();
                 if(string.IsNullOrEmpty(text)) continue;
 
-                if(!double.TryParse(t.Attribute("left")?.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out var left) ||
-                   !double.TryParse(t.Attribute("top")?.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out var top) ||
-                   !double.TryParse(t.Attribute("width")?.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out var width) ||
-                   !double.TryParse(t.Attribute("height")?.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out var height))
+                if(!double.TryParse(t.Attribute("left")?.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out var rawLeft) ||
+                   !double.TryParse(t.Attribute("top")?.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out var rawTop) ||
+                   !double.TryParse(t.Attribute("width")?.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out var rawWidth) ||
+                   !double.TryParse(t.Attribute("height")?.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out var rawHeight))
                     continue;
 
+                var left = rawLeft / scaleX;
+                var top = rawTop / scaleY;
+                var width = rawWidth / scaleX;
+                var height = rawHeight / scaleY;
+
                 var fontId = t.Attribute("font")?.Value ?? "";
-                var font = fontSpecs.GetValueOrDefault(fontId, new FontSpec(fontId, Math.Max(6, height), "Liberation Sans", "#000000", false, false));
+                var font = fontSpecs.GetValueOrDefault(fontId, new FontSpec(fontId, Math.Max(4, height), "Liberation Sans", "#000000", false, false));
                 var bold = font.Bold || t.Descendants("b").Any();
                 var italic = font.Italic || t.Descendants("i").Any();
 
@@ -73,54 +85,9 @@ public static class VectorTextExtractor {
                 mergedLines.Add(current);
             }
 
-            // Group consecutive lines into paragraph blocks
-            var paragraphs = new List<(double Left, double Top, double Width, double Height, string Text, FontSpec Font, bool Bold, bool Italic, int LineCount)>();
-            var currentGroup = new List<(double Left, double Top, double Width, double Height, string Text, FontSpec Font, bool Bold, bool Italic)>();
-
-            void FlushCurrentGroup() {
-                if(currentGroup.Count == 0) return;
-                var first = currentGroup[0];
-                var last = currentGroup[^1];
-                var left = currentGroup.Min(l => l.Left);
-                var top = first.Top;
-                var right = currentGroup.Max(l => l.Left + l.Width);
-                var bottom = last.Top + last.Height;
-                var width = right - left;
-                var height = bottom - top;
-                var text = string.Join("\n", currentGroup.Select(l => l.Text));
-                paragraphs.Add((left, top, width, height, text, first.Font, first.Bold, first.Italic, currentGroup.Count));
-                currentGroup.Clear();
-            }
-
-            for(var i = 0; i < mergedLines.Count; i++) {
-                var line = mergedLines[i];
-                if(currentGroup.Count == 0) {
-                    currentGroup.Add(line);
-                    continue;
-                }
-
-                var prev = currentGroup[^1];
-                var verticalGap = line.Top - (prev.Top + prev.Height);
-                var maxGap = Math.Max(12, line.Font.Size * 1.5);
-                var sameFont = line.Font.Family.Equals(prev.Font.Family, StringComparison.OrdinalIgnoreCase) &&
-                               Math.Abs(line.Font.Size - prev.Font.Size) <= 1.0 &&
-                               line.Bold == prev.Bold &&
-                               line.Italic == prev.Italic;
-                var isAligned = Math.Abs(line.Left - prev.Left) <= Math.Max(35, line.Font.Size * 3);
-                var isNextLine = verticalGap >= -3 && verticalGap <= maxGap;
-
-                if(sameFont && isAligned && isNextLine) {
-                    currentGroup.Add(line);
-                } else {
-                    FlushCurrentGroup();
-                    currentGroup.Add(line);
-                }
-            }
-            FlushCurrentGroup();
-
             var blocks = new List<OriginalTextBlock>();
-            for(var i = 0; i < paragraphs.Count; i++) {
-                var item = paragraphs[i];
+            for(var i = 0; i < mergedLines.Count; i++) {
+                var item = mergedLines[i];
                 var fontSize = Math.Max(4, Math.Round(item.Font.Size, 1));
                 var bounds = new ObjectBounds(item.Left, item.Top, Math.Max(item.Width, 8), Math.Max(item.Height, 8));
                 var fingerprint = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes($"{page}_{i}_{item.Text}_{item.Left}_{item.Top}")));
@@ -137,7 +104,7 @@ public static class VectorTextExtractor {
                     Bold: item.Bold,
                     Italic: item.Italic,
                     Alignment: TextAlignment.Left,
-                    LineCount: item.LineCount
+                    LineCount: 1
                 ));
             }
 

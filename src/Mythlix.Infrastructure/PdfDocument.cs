@@ -55,7 +55,7 @@ public sealed class PdfDocumentSession : IPdfDocument, IContentEditor, ISearchab
   BlankOriginalTextInStreams(p, page, block);
   var geometry = GetPageGeometry(page);
   var currentGraphics = GetGraphics(page).ToList();
-  var pad = 1.0;
+  var pad = 0.5;
   var maskX = Math.Max(0, block.Bounds.X - pad);
   var maskY = Math.Max(0, block.Bounds.Y - pad);
   var mask = new GraphicObject {
@@ -77,8 +77,8 @@ public sealed class PdfDocumentSession : IPdfDocument, IContentEditor, ISearchab
     Kind = GraphicKind.Text,
     X = textX,
     Y = textY,
-    Width = Math.Clamp(Math.Max(block.Bounds.Width + 24, options.MaxWidth ?? 100), 4, geometry.Width - textX),
-    Height = Math.Clamp(Math.Max(block.Bounds.Height * 2, options.FontSize * 2), 4, geometry.Height - textY),
+    Width = Math.Clamp(Math.Max(block.Bounds.Width, options.MaxWidth ?? 10), 4, geometry.Width - textX),
+    Height = Math.Clamp(Math.Max(block.Bounds.Height, options.FontSize), 4, geometry.Height - textY),
     Text = options.Text,
     FontSize = options.FontSize,
     Color = string.IsNullOrWhiteSpace(options.Color) ? block.Color : options.Color,

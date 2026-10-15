@@ -86,19 +86,22 @@ internal static class GraphicLayerWriter {
     var style = (item.Bold ? XFontStyleEx.Bold : XFontStyleEx.Regular) | (item.Italic ? XFontStyleEx.Italic : XFontStyleEx.Regular);
     var family = string.IsNullOrWhiteSpace(item.FontFamily) ? "Liberation Sans" : item.FontFamily;
     var font=new XFont(family,item.FontSize,style,new XPdfFontOptions(PdfFontEncoding.Unicode));
-    var measured = graphics.MeasureString(item.Text, font);
-    var drawWidth = item.Text.Contains('\n') ? Math.Max(item.Width, measured.Width + 12) : Math.Max(item.Width, measured.Width + 24);
-    var drawHeight = Math.Max(item.Height, measured.Height * 2.0);
-    var drawRect = new XRect(item.X, item.Y, drawWidth, drawHeight);
-    var formatter = new XTextFormatter(graphics) {
-     Alignment = item.Alignment switch {
-      TextAlignment.Center => XParagraphAlignment.Center,
-      TextAlignment.Right => XParagraphAlignment.Right,
-      TextAlignment.Justify => XParagraphAlignment.Justify,
-      _ => XParagraphAlignment.Left
-     }
+    var xAlign = item.Alignment switch {
+     TextAlignment.Center => XStringFormats.TopCenter,
+     TextAlignment.Right => XStringFormats.TopRight,
+     _ => XStringFormats.TopLeft
     };
-    formatter.DrawString(item.Text,font,new XSolidBrush(color),drawRect,XStringFormats.TopLeft);
+    if(!item.Text.Contains('\n')) {
+     var drawRect = new XRect(item.X, item.Y, Math.Max(item.Width, 10), Math.Max(item.Height, item.FontSize));
+     graphics.DrawString(item.Text, font, new XSolidBrush(color), drawRect, xAlign);
+    } else {
+     var lines = item.Text.Split('\n');
+     var lineH = item.Height / Math.Max(1, lines.Length);
+     for(var li = 0; li < lines.Length; li++) {
+      var drawRect = new XRect(item.X, item.Y + li * lineH, item.Width, lineH);
+      graphics.DrawString(lines[li], font, new XSolidBrush(color), drawRect, xAlign);
+     }
+    }
     break;
    case GraphicKind.Image:
     using(var memory=new MemoryStream(item.ImageData!,0,item.ImageData!.Length,false,true))
