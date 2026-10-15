@@ -74,6 +74,15 @@ public sealed partial class WorkspaceViewModel {
   OnPropertyChanged(nameof(SelectionLabel));
  }
 
+ public void SelectOriginals(IEnumerable<OriginalTextBlock> blocks, bool additive = false) {
+  SelectedGraphic=null;
+  if(!additive) SelectedOriginals.Clear();
+  foreach(var block in blocks)
+   if(!SelectedOriginals.Any(b=>b.Id==block.Id)) SelectedOriginals.Add(block);
+  SelectedOriginal=SelectedOriginals.LastOrDefault();
+  NotifySelectionProperties();
+ }
+
  public void ToggleSelectOriginal(OriginalTextBlock block, bool multiSelect) {
   SelectedGraphic = null;
   if(!multiSelect) {

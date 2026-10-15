@@ -61,15 +61,15 @@ public sealed partial class WorkspaceViewModel : ObservableObject, IDisposable {
   var png = await renderer.RenderAsync(doc.WorkingPath, CurrentPage, 1600, CancellationToken.None);
   var thumb = await renderer.RenderAsync(doc.WorkingPath, CurrentPage, 220, CancellationToken.None);
   var text = await renderer.ExtractTextAsync(doc.WorkingPath, CurrentPage, CancellationToken.None);
-  if(state.Text.Blocks.Count == 0 && !string.IsNullOrWhiteSpace(text)) {
+  if(!string.IsNullOrWhiteSpace(text)) {
    try {
     var xml = await poppler.ExtractXmlAsync(doc.WorkingPath, CurrentPage, CancellationToken.None);
     var vectorAnalysis = Mythlix.Infrastructure.TextEditing.VectorTextExtractor.ExtractFromXml(xml, CurrentPage, state.Geometry);
-    if(vectorAnalysis.Blocks.Count > 0) state = (state.Geometry, state.Objects, vectorAnalysis);
+    if(vectorAnalysis.Blocks.Count > 0) state = (state.Geometry, state.Objects, Mythlix.Infrastructure.TextEditing.VectorTextExtractor.Merge(state.Text, vectorAnalysis));
     else {
      var tsv = await poppler.ExtractTsvAsync(doc.WorkingPath, CurrentPage, CancellationToken.None);
      vectorAnalysis = Mythlix.Infrastructure.TextEditing.VectorTextExtractor.Extract(tsv, CurrentPage, state.Geometry);
-     if(vectorAnalysis.Blocks.Count > 0) state = (state.Geometry, state.Objects, vectorAnalysis);
+     if(vectorAnalysis.Blocks.Count > 0) state = (state.Geometry, state.Objects, Mythlix.Infrastructure.TextEditing.VectorTextExtractor.Merge(state.Text, vectorAnalysis));
     }
    } catch {}
   }

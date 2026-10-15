@@ -13,6 +13,7 @@ public partial class MainWindow : Window {
  bool autoFit=true;
  public MainWindow() {
   InitializeComponent(); DataContext=vm; Closing += OnClosing;
+  Viewport.AddHandler(PointerWheelChangedEvent, OnViewportWheel, RoutingStrategies.Tunnel, handledEventsToo: true);
   PdfCanvas.TextDoubleClicked += OnTextDoubleClicked;
   DirectEditor.TextChanged += (_,_) => { if(DirectEditor.IsVisible) GrowEditorToText(); };
   PdfCanvas.GraphicTextDoubleClicked += OnGraphicTextDoubleClicked;
@@ -284,12 +285,22 @@ public partial class MainWindow : Window {
   } catch(OperationCanceledException) {vm.Status="Exportación cancelada; no se publicaron imágenes.";}
   finally {progress.Close();}
  });
- async void RotateClick(object? s,RoutedEventArgs e)=>await Execute(()=>vm.EditAsync("rotate"));
+ async void RotateClick(object? s,RoutedEventArgs e) {
+  await CommitDirectEditAsync();
+  await Execute(async()=>{await vm.EditAsync("rotate");if(autoFit)FitPageToView();});
+ }
  async void AddClick(object? s,RoutedEventArgs e)=>await Execute(()=>vm.EditAsync("add"));
  async void DeleteClick(object? s,RoutedEventArgs e)=>await Execute(async()=>{if(vm.Selected is not null && await Confirm("Eliminar la página actual? Puede deshacer esta operación."))await vm.EditAsync("delete");});
  async void UndoClick(object? s,RoutedEventArgs e)=>await Execute(()=>vm.HistoryAsync(false));
  async void RedoClick(object? s,RoutedEventArgs e)=>await Execute(()=>vm.HistoryAsync(true));
  async void SearchClick(object? s,RoutedEventArgs e)=>await Execute(vm.SearchAsync);
+ void OnViewportWheel(object? sender, PointerWheelEventArgs e) {
+  if(!e.KeyModifiers.HasFlag(KeyModifiers.Control) || vm.IsEmpty || e.Delta.Y==0)return;
+  e.Handled=true;
+  if(DirectEditor.IsVisible) { _ = CommitDirectEditAsync(); }
+  autoFit=false;
+  vm.Zoom=Math.Clamp(vm.Zoom*Math.Pow(1.15,e.Delta.Y),25,300);
+ }
  void ZoomInClick(object? s,RoutedEventArgs e){autoFit=false;vm.Zoom=Math.Min(300,vm.Zoom+25);}
  void ZoomOutClick(object? s,RoutedEventArgs e){autoFit=false;vm.Zoom=Math.Max(25,vm.Zoom-25);}
  void ResetZoomClick(object? s,RoutedEventArgs e){autoFit=false;vm.Zoom=100;}
@@ -469,7 +480,13 @@ public partial class MainWindow : Window {
   }
  }
 
- async Task CommitDirectEditAsync() {
+ Task? pendingDirectCommit;
+ Task CommitDirectEditAsync() {
+  if(isCommitting) return pendingDirectCommit ?? Task.CompletedTask;
+  return pendingDirectCommit=CommitDirectEditCoreAsync();
+ }
+
+ async Task CommitDirectEditCoreAsync() {
   if(isCommitting || isDirectCanceling || !DirectEditor.IsVisible) return;
   isCommitting = true;
   try {

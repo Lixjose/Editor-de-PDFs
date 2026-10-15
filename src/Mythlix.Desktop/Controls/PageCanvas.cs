@@ -20,6 +20,9 @@ public sealed class PageCanvas : Control {
  ObjectBounds? preview;
  Point start;
  bool resizing;
+ bool selecting;
+ bool additiveSelection;
+ Rect? selectionBox;
  bool moved;
  OriginalTextBlock? hoveredOriginal;
  protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change) {
@@ -37,6 +40,9 @@ public sealed class PageCanvas : Control {
   base.Render(context);
   var vm=Workspace;if(vm?.PageImage is not {} image)return;
   context.DrawImage(image,new Rect(0,0,image.PixelSize.Width,image.PixelSize.Height),new Rect(Bounds.Size));
+  if(selectionBox is {} marquee) {
+   context.DrawRectangle(new SolidColorBrush(Color.Parse("#204F46E5")), new Pen(Brush.Parse("#818CF8"),1),marquee);
+  }
   if(vm.ActiveEditingOriginal is {} editing) {
    var factor=Bounds.Width/vm.Geometry.DisplayWidth;var box=vm.Geometry.ToDisplay(editing.Bounds);
    var maskRect=new Rect(box.X*factor-2,box.Y*factor-2,box.Width*factor+4,box.Height*factor+4);
@@ -97,7 +103,12 @@ public sealed class PageCanvas : Control {
    }
   }
 
-  if(e.ClickCount == 2) {
+  if(vm.SelectedGraphic is null && e.ClickCount == 1) {
+   selecting=true;
+   additiveSelection=e.KeyModifiers.HasFlag(KeyModifiers.Shift) || e.KeyModifiers.HasFlag(KeyModifiers.Control);
+   e.Pointer.Capture(this);
+  }
+  if(e.ClickCount == 2 && !e.KeyModifiers.HasFlag(KeyModifiers.Shift) && !e.KeyModifiers.HasFlag(KeyModifiers.Control)) {
    if(vm.SelectedOriginal is {} orig) {
     var factor=Bounds.Width/vm.Geometry.DisplayWidth;
     var box=vm.Geometry.ToDisplay(orig.Bounds);
@@ -117,6 +128,15 @@ public sealed class PageCanvas : Control {
   base.OnPointerMoved(e);
   var vm=Workspace;if(vm is null || vm.Busy)return;
   var scale=Bounds.Width/vm.Geometry.DisplayWidth;var p=e.GetPosition(this);
+  if(selecting) {
+   var origin=new Point(start.X*scale,start.Y*scale);
+   if(Math.Abs(p.X-origin.X)+Math.Abs(p.Y-origin.Y)>4 || selectionBox is not null) {
+    selectionBox=new Rect(origin,p).Normalize();
+    InvalidateVisual();
+   }
+   e.Handled=true;
+   return;
+  }
   if(dragObject is null && vm.Geometry.CanEdit) {
    var scaledPt = new Point(p.X/scale, p.Y/scale);
    var overOrig = vm.OriginalBlocks.FirstOrDefault(item => vm.Geometry.ToDisplay(item.Bounds).Contains(scaledPt.X, scaledPt.Y));
@@ -141,6 +161,15 @@ public sealed class PageCanvas : Control {
  protected override async void OnPointerReleased(PointerReleasedEventArgs e) {
   base.OnPointerReleased(e);
   var vm=Workspace;var item=dragObject;var b=preview;var changed=moved;
+  if(selecting && selectionBox is {} box && vm is not null) {
+   var factor=Bounds.Width/vm.Geometry.DisplayWidth;
+   var hits=vm.OriginalBlocks.Where(block=> {
+    var bounds=vm.Geometry.ToDisplay(block.Bounds);
+    return box.Intersects(new Rect(bounds.X*factor,bounds.Y*factor,bounds.Width*factor,bounds.Height*factor));
+   }).ToArray();
+   vm.SelectOriginals(hits,additiveSelection);
+  }
+  selecting=false;selectionBox=null;
   dragObject=null;preview=null;moved=false;e.Pointer.Capture(null);
   if(vm is not null && item is not null && b is {} display && changed) {
    var raw=vm.Geometry.FromDisplay(display);
@@ -148,6 +177,6 @@ public sealed class PageCanvas : Control {
   }
   InvalidateVisual();e.Handled=true;
  }
- protected override void OnPointerCaptureLost(PointerCaptureLostEventArgs e) {dragObject=null;preview=null;moved=false;InvalidateVisual();base.OnPointerCaptureLost(e);}
+ protected override void OnPointerCaptureLost(PointerCaptureLostEventArgs e) {selecting=false;selectionBox=null;dragObject=null;preview=null;moved=false;InvalidateVisual();base.OnPointerCaptureLost(e);}
  protected override void OnPointerExited(PointerEventArgs e) {base.OnPointerExited(e);if(hoveredOriginal is not null){hoveredOriginal=null;InvalidateVisual();}}
 }

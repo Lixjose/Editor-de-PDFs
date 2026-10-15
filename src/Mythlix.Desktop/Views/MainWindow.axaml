@@ -41,7 +41,7 @@
     <Button Content="□" Command="{Binding AddRectangleCommand}" FontSize="20" ToolTip.Tip="Rectángulo"/><Button Content="◯" Command="{Binding AddEllipseCommand}" FontSize="20" ToolTip.Tip="Elipse"/><Button Content="╱" Command="{Binding AddLineCommand}" FontSize="20" ToolTip.Tip="Línea"/>
     <Border Width="1" Background="#464555" Margin="8"/><TextBlock Text="{Binding SelectionLabel}" Classes="caption" VerticalAlignment="Center" Margin="8,0"/>
    </StackPanel></ScrollViewer>
-   <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" IsEnabled="{Binding !Busy}" Margin="8,0"><Button Content="↶" Click="UndoClick" FontSize="20" ToolTip.Tip="Deshacer"/><Button Content="↷" Click="RedoClick" FontSize="20" ToolTip.Tip="Rehacer"/><Border Width="1" Background="#464555" Margin="8"/><Button Content="▣  Guardar copia" Click="SaveClick" Classes="utility"/></StackPanel>
+   <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" IsEnabled="{Binding !Busy}" Margin="8,0"><Button Content="↶" Click="UndoClick" FontSize="20" ToolTip.Tip="Deshacer"/><Button Content="↷" Click="RedoClick" FontSize="20" ToolTip.Tip="Rehacer"/><Border Width="1" Background="#464555" Margin="8"/><Button Content="↻" Click="RotateClick" ToolTip.Tip="Rotar página 90°" FontSize="20"/><Button Content="▣  Guardar copia" Click="SaveClick" Classes="utility"/></StackPanel>
   </Grid>
   <Grid Grid.Row="3" ColumnDefinitions="260,3,*,3,310">
    <Grid Background="#1B1B1F" RowDefinitions="44,*,Auto">

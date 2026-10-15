@@ -7,6 +7,21 @@ using Mythlix.Core;
 namespace Mythlix.Infrastructure.TextEditing;
 
 public static class VectorTextExtractor {
+    public static TextAnalysis Merge(TextAnalysis native, TextAnalysis extracted) {
+        // Keep native identities for editable rows, supplementing unsupported original rows.
+        var blocks=native.Blocks.ToList();
+        foreach(var block in extracted.Blocks) {
+            if(blocks.Any(existing => {
+                var a=existing.Bounds; var b=block.Bounds;
+                var overlap=Math.Max(0,Math.Min(a.X+a.Width,b.X+b.Width)-Math.Max(a.X,b.X))
+                    *Math.Max(0,Math.Min(a.Y+a.Height,b.Y+b.Height)-Math.Max(a.Y,b.Y));
+                return overlap>0.5*Math.Min(a.Width*a.Height,b.Width*b.Height);
+            })) continue;
+            blocks.Add(block);
+        }
+        return new(blocks.OrderBy(b=>b.Bounds.Y).ThenBy(b=>b.Bounds.X).ToArray(), native.UnsupportedBlocks, extracted.Explanation);
+    }
+
     sealed record FontSpec(string Id, double Size, string Family, string Color, bool Bold, bool Italic);
 
     public static TextAnalysis ExtractFromXml(string xml, int page, PageGeometry geometry) {
