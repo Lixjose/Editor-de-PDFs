@@ -92,8 +92,22 @@ internal static class GraphicLayerWriter {
      _ => XStringFormats.TopLeft
     };
     if(!item.Text.Contains('\n')) {
-     var drawRect = new XRect(item.X, item.Y, Math.Max(item.Width, 10), Math.Max(item.Height, item.FontSize));
-     graphics.DrawString(item.Text, font, new XSolidBrush(color), drawRect, xAlign);
+     if(item.Baseline.HasValue) {
+      var format = item.Alignment switch {
+       TextAlignment.Center => new XStringFormat { Alignment = XStringAlignment.Center, LineAlignment = XLineAlignment.BaseLine },
+       TextAlignment.Right => new XStringFormat { Alignment = XStringAlignment.Far, LineAlignment = XLineAlignment.BaseLine },
+       _ => new XStringFormat { Alignment = XStringAlignment.Near, LineAlignment = XLineAlignment.BaseLine }
+      };
+      var anchorX = item.Alignment switch {
+       TextAlignment.Center => item.X + item.Width / 2,
+       TextAlignment.Right => item.X + item.Width,
+       _ => item.X
+      };
+      graphics.DrawString(item.Text, font, new XSolidBrush(color), new XPoint(anchorX, item.Y + item.Baseline.Value), format);
+     } else {
+      var drawRect = new XRect(item.X, item.Y, Math.Max(item.Width, 10), Math.Max(item.Height, item.FontSize));
+      graphics.DrawString(item.Text, font, new XSolidBrush(color), drawRect, xAlign);
+     }
     } else {
      var lines = item.Text.Split('\n');
      var lineH = item.Height / Math.Max(1, lines.Length);

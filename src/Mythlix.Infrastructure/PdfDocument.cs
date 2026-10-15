@@ -50,6 +50,41 @@ public sealed class PdfDocumentSession : IPdfDocument, IContentEditor, ISearchab
   }
   catch {Restore(before);throw;}
  }
+ public void MoveTextBlocks(int page, IReadOnlyList<TextBlockMove> moves) {
+  if(moves.Count == 0) return;
+  var before = Snapshot();
+  try {
+   foreach(var move in moves) {
+    var opts = new TextEditOptions(
+     Text: move.Block.Text,
+     FontSize: move.Block.FontSize,
+     Color: move.Block.Color,
+     Bold: move.Block.Bold,
+     Italic: move.Block.Italic,
+     Alignment: move.Block.Alignment,
+     FontFamily: move.Block.FontName,
+     Strict: false,
+     X: move.NewX,
+     Baseline: move.NewBaseline
+    );
+    if(move.Block.Id.StartsWith("v:")) {
+     ReplaceVectorText(page, move.Block, opts);
+    } else {
+     TextEditing.OriginalTextEditor.Replace(document, document.Pages[page - 1], GetPageGeometry(page), move.Block, opts);
+    }
+   }
+  } catch {
+   Restore(before);
+   throw;
+  }
+ }
+ public IReadOnlyDictionary<string, FontVerticalMetrics> GetFontMetrics(int page) {
+  var result = new Dictionary<string, FontVerticalMetrics>(StringComparer.OrdinalIgnoreCase);
+  foreach(var (name, metrics) in TextEditing.StandardFontMetrics.Fonts) {
+   result[name] = new FontVerticalMetrics(metrics.Ascent / 1000.0, metrics.Descent / 1000.0);
+  }
+  return result;
+ }
  void ReplaceVectorText(int page, OriginalTextBlock block, TextEditOptions options) {
   var p = document.Pages[page - 1];
   BlankOriginalTextInStreams(p, page, block);
@@ -71,8 +106,11 @@ public sealed class PdfDocumentSession : IPdfDocument, IContentEditor, ISearchab
   currentGraphics.Add(mask);
 
   if(!string.IsNullOrEmpty(options.Text)) {
-   var textX = Math.Clamp(block.Bounds.X, 0, geometry.Width - 10);
-   var textY = Math.Clamp(block.Bounds.Y, 0, geometry.Height - 10);
+   var textX = Math.Clamp(options.X ?? block.Bounds.X, 0, geometry.Width - 10);
+   var textY = Math.Clamp(options.Baseline.HasValue ? options.Baseline.Value - options.FontSize * 0.78 : block.Bounds.Y, 0, geometry.Height - 10);
+   var baselineOffset = options.Baseline.HasValue ? (options.Baseline.Value - textY)
+    : block.Baseline.HasValue ? (block.Baseline.Value - textY)
+    : (block.EffectiveBaseline - textY);
    var textObj = new GraphicObject {
     Kind = GraphicKind.Text,
     X = textX,
@@ -86,6 +124,7 @@ public sealed class PdfDocumentSession : IPdfDocument, IContentEditor, ISearchab
     Italic = options.Italic,
     Alignment = options.Alignment,
     FontFamily = string.IsNullOrWhiteSpace(options.FontFamily) || options.FontFamily == "Conservar fuente" ? block.FontName : options.FontFamily,
+    Baseline = baselineOffset,
     StrokeWidth = 0
    };
    currentGraphics.Add(textObj);

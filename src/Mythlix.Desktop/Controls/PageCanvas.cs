@@ -47,6 +47,19 @@ public sealed class PageCanvas : Control {
    var hoverRect=new Rect(box.X*factor,box.Y*factor,box.Width*factor,box.Height*factor);
    context.DrawRectangle(new SolidColorBrush(Color.Parse("#082563EB")),new Pen(Brush.Parse("#402563EB"),1),hoverRect);
   }
+  if(vm.SelectedOriginals.Count > 1) {
+   var factor=Bounds.Width/vm.Geometry.DisplayWidth;
+   foreach(var orig in vm.SelectedOriginals) {
+    if(orig == vm.ActiveEditingOriginal) continue;
+    var box=vm.Geometry.ToDisplay(orig.Bounds);
+    var rect=new Rect(box.X*factor,box.Y*factor,box.Width*factor,box.Height*factor);
+    var isPrimary = orig == vm.SelectedOriginal;
+    var fill = isPrimary ? new SolidColorBrush(Color.Parse("#254F46E5")) : new SolidColorBrush(Color.Parse("#124F46E5"));
+    var multiPen = new Pen(Brush.Parse(isPrimary ? "#C3C0FF" : "#818CF8"), isPrimary ? 1.5 : 1);
+    context.DrawRectangle(fill, multiPen, rect);
+   }
+   return;
+  }
   if(vm.SelectedOriginal is {} original && original != vm.ActiveEditingOriginal) {
    var factor=Bounds.Width/vm.Geometry.DisplayWidth;var box=vm.Geometry.ToDisplay(original.Bounds);
    var rect=new Rect(box.X*factor,box.Y*factor,box.Width*factor,box.Height*factor);
@@ -74,7 +87,15 @@ public sealed class PageCanvas : Control {
    resizing=Math.Abs(p.X-(b.X+b.Width)*scale)<=9 && Math.Abs(p.Y-(b.Y+b.Height)*scale)<=9;
   }
   if(!resizing)vm.SelectedGraphic=vm.PageObjects.Reverse().FirstOrDefault(item=>vm.Geometry.ToDisplay(new(item.X,item.Y,item.Width,item.Height)).Contains(start.X,start.Y));
-  if(vm.SelectedGraphic is null)vm.SelectedOriginal=vm.OriginalBlocks.Reverse().FirstOrDefault(item=>vm.Geometry.ToDisplay(item.Bounds).Contains(start.X,start.Y));
+  if(vm.SelectedGraphic is null) {
+   var clickedOrig = vm.OriginalBlocks.Reverse().FirstOrDefault(item=>vm.Geometry.ToDisplay(item.Bounds).Contains(start.X,start.Y));
+   if(clickedOrig is not null) {
+    var isMulti = e.KeyModifiers.HasFlag(KeyModifiers.Control) || e.KeyModifiers.HasFlag(KeyModifiers.Shift);
+    vm.ToggleSelectOriginal(clickedOrig, isMulti);
+   } else if(!e.KeyModifiers.HasFlag(KeyModifiers.Control) && !e.KeyModifiers.HasFlag(KeyModifiers.Shift)) {
+    vm.ClearOriginalSelection();
+   }
+  }
 
   if(e.ClickCount == 2) {
    if(vm.SelectedOriginal is {} orig) {

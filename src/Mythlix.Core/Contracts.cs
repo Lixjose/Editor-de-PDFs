@@ -24,6 +24,10 @@ public interface IContentEditor {
  TextAnalysis AnalyzeText(int page);
  void ReplaceText(int page, OriginalTextBlock block, string replacement, double fontSize);
  void ReplaceText(int page, OriginalTextBlock block, TextEditOptions options);
+ /// <summary>Moves several text lines as one atomic operation (all or nothing).</summary>
+ void MoveTextBlocks(int page, IReadOnlyList<TextBlockMove> moves);
+ /// <summary>Ascent/descent of the page fonts keyed by base font name (subset prefix removed).</summary>
+ IReadOnlyDictionary<string, FontVerticalMetrics> GetFontMetrics(int page);
 }
 public interface IOcrEngine {
  Task<IReadOnlyList<string>> LanguagesAsync(CancellationToken token);

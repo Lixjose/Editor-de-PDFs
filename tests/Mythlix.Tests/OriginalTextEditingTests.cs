@@ -152,6 +152,33 @@ public sealed class OriginalTextEditingTests:IDisposable {
   Assert.Equal("Montserrat", second.FontName);
   Assert.Equal(18, second.FontSize);
   Assert.True(second.Bold);
+  Assert.NotNull(first.Baseline);
+  Assert.NotNull(second.Baseline);
+ }
+ [Fact] public async Task MoveTextBlocksUpdatesPositionAndPreservesOtherContent(){
+  using var doc = new PdfDocumentSession(Source);
+  var block1 = new OriginalTextBlock("v:1:0", "Fila 1", "Liberation Sans", 14, new ObjectBounds(60, 100, 150, 18), "fp1", Baseline: 114);
+  var block2 = new OriginalTextBlock("v:1:1", "Fila 2", "Liberation Sans", 14, new ObjectBounds(80, 130, 150, 18), "fp2", Baseline: 144);
+  var moves = new List<TextBlockMove> {
+   new(block1, 50, 114),
+   new(block2, 50, 144) // Aligned left to X=50
+  };
+  doc.MoveTextBlocks(1, moves);
+  await doc.SaveCopyAsync(Output);
+  var graphics = doc.GetGraphics(1);
+  var textGraphics = graphics.Where(g => g.Kind == GraphicKind.Text).ToList();
+  Assert.Equal(2, textGraphics.Count);
+  Assert.Equal(50, textGraphics[0].X);
+  Assert.Equal(50, textGraphics[1].X);
+ }
+ [Fact] public void ReplaceTextWithCustomXAndBaselinePositionsCorrectly(){
+  using var doc = new PdfDocumentSession(Source);
+  var fakeBlock = new OriginalTextBlock("v:1:0", "Fila desordenada", "Liberation Sans", 14, new ObjectBounds(75, 120, 200, 18), "fp0", Baseline: 134);
+  doc.ReplaceText(1, fakeBlock, new TextEditOptions("Fila alineada", 14, X: 50, Baseline: 134));
+  var graphics = doc.GetGraphics(1);
+  var textObj = Assert.Single(graphics, g => g.Kind == GraphicKind.Text);
+  Assert.Equal(50, textObj.X);
+  Assert.Equal("Fila alineada", textObj.Text);
  }
  public void Dispose()=>Directory.Delete(directory,true);
 }

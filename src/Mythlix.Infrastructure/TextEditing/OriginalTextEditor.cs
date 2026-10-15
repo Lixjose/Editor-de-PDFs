@@ -192,6 +192,7 @@ internal static class OriginalTextEditor {
         var value = winAnsi ? WindowsEncoding.GetString(text.Bytes!) : Encoding.ASCII.GetString(text.Bytes!);
         if(value.Any(char.IsControl) || text.Bytes!.Contains((byte)173)) return null;
 
+        var baseline = top + metrics.Ascent * size / 1000;
         var blockObj = new OriginalTextBlock(
             id, value, family, size, new(x, top, width, height), fingerprint,
             CanChangeFontSize: true,
@@ -199,7 +200,8 @@ internal static class OriginalTextEditor {
             Bold: bold,
             Italic: italic,
             Alignment: TextAlignment.Left,
-            LineCount: 1
+            LineCount: 1,
+            Baseline: baseline
         );
 
         return new(blockObj, stream, text, tokens[font.i - 1], widths, winAnsi, btByteStart, btByteLength, name.TrimStart('/'), family, x, y);
@@ -287,14 +289,17 @@ internal static class OriginalTextEditor {
             }
         }
 
+        double startX = options.X ?? candidate.BaselineX;
+        double startBaselineY = options.Baseline.HasValue ? (geometry.Height - options.Baseline.Value) : candidate.BaselineY;
+
         if(lines.Count == 0) {
-            sb.AppendLine($"1 0 0 1 {candidate.BaselineX.ToString("G17", CultureInfo.InvariantCulture)} {candidate.BaselineY.ToString("G17", CultureInfo.InvariantCulture)} Tm () Tj");
+            sb.AppendLine($"1 0 0 1 {startX.ToString("G17", CultureInfo.InvariantCulture)} {startBaselineY.ToString("G17", CultureInfo.InvariantCulture)} Tm () Tj");
         } else {
             double leading = options.FontSize * 1.25;
             for(var i = 0; i < lines.Count; i++) {
                 var line = lines[i];
-                double lineX = candidate.BaselineX + line.XOffset;
-                double lineY = candidate.BaselineY - (i * leading);
+                double lineX = startX + line.XOffset;
+                double lineY = startBaselineY - (i * leading);
                 sb.AppendLine($"1 0 0 1 {lineX.ToString("G17", CultureInfo.InvariantCulture)} {lineY.ToString("G17", CultureInfo.InvariantCulture)} Tm");
                 sb.Append(Encoding.ASCII.GetString(ContentTokenizer.Literal(line.EncodedBytes)));
                 sb.AppendLine(" Tj");

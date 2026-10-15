@@ -104,7 +104,8 @@ public static class VectorTextExtractor {
                     Bold: item.Bold,
                     Italic: item.Italic,
                     Alignment: TextAlignment.Left,
-                    LineCount: 1
+                    LineCount: 1,
+                    Baseline: Math.Round(item.Top + item.Height * 0.78, 2)
                 ));
             }
 
@@ -176,7 +177,8 @@ public static class VectorTextExtractor {
                 Bold: false,
                 Italic: false,
                 Alignment: TextAlignment.Left,
-                LineCount: 1
+                LineCount: 1,
+                Baseline: Math.Round(line.Top + line.Height * 0.78, 2)
             ));
         }
 

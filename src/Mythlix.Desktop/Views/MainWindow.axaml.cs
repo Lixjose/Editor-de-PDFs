@@ -483,7 +483,7 @@ public partial class MainWindow : Window {
    var newText = DirectEditor.Text ?? "";
    if(targetOrig is not null) {
     if(newText != targetOrig.Text) {
-     await vm.CommitOriginalTextDirectAsync(targetOrig, newText, targetOrig.FontName, targetOrig.FontSize, null, targetOrig.Bold, targetOrig.Italic);
+     await vm.CommitOriginalTextDirectAsync(targetOrig, newText, targetOrig.FontName, targetOrig.FontSize, null, targetOrig.Bold, targetOrig.Italic, targetOrig.Bounds.X, targetOrig.EffectiveBaseline);
     }
    } else if(targetGraph is not null) {
     if(newText != targetGraph.Text) {

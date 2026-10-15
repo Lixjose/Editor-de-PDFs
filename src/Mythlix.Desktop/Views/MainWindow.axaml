@@ -1,4 +1,4 @@
-<Window xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:controls="clr-namespace:Mythlix.Desktop.Controls" x:Class="Mythlix.Desktop.Views.MainWindow" Title="Mythlix — Editor PDF" Width="1500" Height="1000" MinWidth="1080" MinHeight="720" Background="#121316" FontSize="13">
+<Window xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:controls="clr-namespace:Mythlix.Desktop.Controls" x:Class="Mythlix.Desktop.Views.MainWindow" Icon="avares://Mythlix.Desktop/Assets/mythlix.ico" Title="Mythlix — Editor PDF" Width="1500" Height="1000" MinWidth="1080" MinHeight="720" Background="#121316" FontSize="13">
  <Window.Styles>
   <Style Selector="Button"><Setter Property="Background" Value="Transparent"/><Setter Property="BorderThickness" Value="0"/><Setter Property="Margin" Value="2"/><Setter Property="Padding" Value="10,6"/><Setter Property="CornerRadius" Value="3"/><Setter Property="MinHeight" Value="30"/><Setter Property="Foreground" Value="#C7C4D8"/></Style>
   <Style Selector="Button:pointerover"><Setter Property="Background" Value="#292A2D"/></Style>
@@ -16,7 +16,7 @@
  </Window.Styles>
  <Grid RowDefinitions="40,32,48,*,30">
   <Grid ColumnDefinitions="210,*,Auto" Background="#0D0E11">
-   <StackPanel Orientation="Horizontal" Margin="12,0" VerticalAlignment="Center" Spacing="8"><Border Background="#4F46E5" CornerRadius="3" Padding="6,3"><TextBlock Text="M" FontWeight="Bold"/></Border><TextBlock Text="Mythlix" FontSize="16" FontWeight="SemiBold"/><TextBlock Text="— Editor" Foreground="#918FA1"/></StackPanel>
+   <StackPanel Orientation="Horizontal" Margin="12,0" VerticalAlignment="Center" Spacing="8"><Image Source="avares://Mythlix.Desktop/Assets/mythlix.png" Width="30" Height="30" Stretch="Uniform" ToolTip.Tip="Mythlix"/><TextBlock Text="Mythlix" FontSize="16" FontWeight="SemiBold"/><TextBlock Text="— Editor" Foreground="#918FA1"/></StackPanel>
    <Menu Grid.Column="1" Background="Transparent" VerticalAlignment="Center" IsEnabled="{Binding !Busy}">
     <MenuItem Header="Archivo"><MenuItem Header="Abrir PDF…" Click="OpenClick"/><MenuItem Header="Guardar copia…" Click="SaveClick"/><MenuItem Header="Cerrar documento" Click="CloseClick"/></MenuItem>
     <MenuItem Header="Editar"><MenuItem Header="Seleccionar texto original" Click="OriginalModeClick"/><MenuItem Header="Deshacer" Click="UndoClick"/><MenuItem Header="Rehacer" Click="RedoClick"/></MenuItem>
@@ -123,19 +123,89 @@
       </StackPanel>
       <TextBlock Text="Conserva el escaneo. El reconocimiento puede contener errores; revise los resultados." Classes="caption" TextWrapping="Wrap"/>
      </StackPanel></Border>
-     <Border Classes="section"><StackPanel Spacing="8"><TextBlock Text="TEXTO ORIGINAL" Classes="caption"/><TextBlock Text="{Binding OriginalStatus}" FontSize="11" Foreground="#918FA1" TextWrapping="Wrap"/>
+     <Border Classes="section"><StackPanel Spacing="8">
+      <Grid ColumnDefinitions="*,Auto">
+       <TextBlock Text="TEXTO ORIGINAL" Classes="caption" VerticalAlignment="Center"/>
+       <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">
+        <Button Content="Todo" Command="{Binding SelectAllOriginalsCommand}" ToolTip.Tip="Seleccionar todos los bloques de la página" Padding="5,2" FontSize="10"/>
+        <Button Content="Limpiar" Command="{Binding ClearOriginalSelectionCommand}" ToolTip.Tip="Deseleccionar" Padding="5,2" FontSize="10"/>
+       </StackPanel>
+      </Grid>
+      <TextBlock Text="{Binding OriginalStatus}" FontSize="11" Foreground="#918FA1" TextWrapping="Wrap"/>
       <ListBox ItemsSource="{Binding OriginalBlocks}" SelectedItem="{Binding SelectedOriginal, Mode=TwoWay}" MaxHeight="115" IsEnabled="{Binding !Busy}"><ListBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Label}" FontSize="12" TextTrimming="CharacterEllipsis"/></DataTemplate></ListBox.ItemTemplate></ListBox>
+
+      <!-- Multi-selection Positioning and Alignment Tools -->
+      <Border IsVisible="{Binding IsMultiOriginalSelected}" Background="#1F2028" BorderBrush="#4F46E5" BorderThickness="1" CornerRadius="4" Padding="8">
+       <StackPanel Spacing="6">
+        <TextBlock Text="{Binding MultiSelectionLabel}" FontWeight="SemiBold" Foreground="#A5B4FC" FontSize="12"/>
+        <TextBlock Text="ALINEAR TEXTO SELECCIONADO" Classes="caption"/>
+        <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="4">
+         <Button Content="⫷ Izq" Command="{Binding AlignSelectedLeftCommand}" ToolTip.Tip="Alinear bordes izquierdos al mismo margen" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
+         <Button Grid.Column="1" Content="⯀ Cen" Command="{Binding AlignSelectedCenterCommand}" ToolTip.Tip="Centrar bloques horizontalmente" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
+         <Button Grid.Column="2" Content="⫸ Der" Command="{Binding AlignSelectedRightCommand}" ToolTip.Tip="Alinear bordes derechos" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
+         <Button Grid.Column="3" Content="↕ Dist" Command="{Binding DistributeVerticalCommand}" ToolTip.Tip="Distribuir verticalmente (interlineado uniforme)" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
+        </Grid>
+        <TextBlock Text="DESPLAZAMIENTO EN GRUPO · pt" Classes="caption"/>
+        <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="4">
+         <Button Content="◄ 1pt" Command="{Binding NudgeCommand}" CommandParameter="left" ToolTip.Tip="Mover todo a la izquierda 1 pt" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
+         <Button Grid.Column="1" Content="► 1pt" Command="{Binding NudgeCommand}" CommandParameter="right" ToolTip.Tip="Mover todo a la derecha 1 pt" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
+         <Button Grid.Column="2" Content="▲ 1pt" Command="{Binding NudgeCommand}" CommandParameter="up" ToolTip.Tip="Subir todo 1 pt" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
+         <Button Grid.Column="3" Content="▼ 1pt" Command="{Binding NudgeCommand}" CommandParameter="down" ToolTip.Tip="Bajar todo 1 pt" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
+        </Grid>
+       </StackPanel>
+      </Border>
+
       <StackPanel IsVisible="{Binding HasOriginal}" Spacing="8" IsEnabled="{Binding !Busy}">
-       <TextBlock Text="TIPOGRAFÍA ORIGINAL" Classes="caption"/><Border Background="#24262B" Padding="9" CornerRadius="3"><TextBlock Text="{Binding OriginalFontLabel}"/></Border>
-       <TextBox Text="{Binding OriginalDraftText, Mode=TwoWay}" TextWrapping="Wrap" AcceptsReturn="True" MinHeight="75" MaxHeight="150"/>
-       <TextBlock Text="TAMAÑO · pt" Classes="caption"/><NumericUpDown IsEnabled="{Binding SelectedOriginal.CanChangeFontSize}" ToolTip.Tip="El tamaño se bloquea si puede afectar a texto que hereda la fuente." Value="{Binding OriginalDraftSize, Mode=TwoWay}" Minimum="4" Maximum="144" FormatString="0.##"/>
-       <StackPanel Orientation="Horizontal" Spacing="12"><CheckBox Content="Negrita" IsChecked="{Binding OriginalDraftBold, Mode=TwoWay}"/><CheckBox Content="Cursiva" IsChecked="{Binding OriginalDraftItalic, Mode=TwoWay}"/></StackPanel>
-       <TextBlock Text="COLOR · #RRGGBB" Classes="caption"/><TextBox Text="{Binding OriginalDraftColor, Mode=TwoWay}"/>
-       <TextBlock Text="ALINEACIÓN" Classes="caption"/><ComboBox SelectedIndex="{Binding OriginalDraftAlignmentIndex, Mode=TwoWay}" HorizontalAlignment="Stretch"><ComboBoxItem>Izquierda</ComboBoxItem><ComboBoxItem>Centro</ComboBoxItem><ComboBoxItem>Derecha</ComboBoxItem></ComboBox>
+       <!-- Single Selection Row Alignment and Positioning Tools -->
+       <StackPanel IsVisible="{Binding !IsMultiOriginalSelected}" Spacing="6">
+        <TextBlock Text="ORDEN Y POSICIÓN DE FILA" Classes="caption"/>
+        <Grid ColumnDefinitions="*,*" ColumnSpacing="6">
+         <Button Content="⫷ Fila superior" Command="{Binding AlignWithPreviousRowCommand}" ToolTip.Tip="Ordenar X con la fila superior para que quede perfectamente alineada" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
+         <Button Grid.Column="1" Content="⫸ Fila inferior" Command="{Binding AlignWithNextRowCommand}" ToolTip.Tip="Ordenar X con la fila inferior" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
+        </Grid>
+        <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="6" RowSpacing="3">
+         <TextBlock Text="Posición X (pt)" Classes="caption"/>
+         <TextBlock Grid.Column="1" Text="Línea base Y (pt)" Classes="caption"/>
+         <NumericUpDown Grid.Row="1" Value="{Binding OriginalDraftX, Mode=TwoWay}" Minimum="0" Maximum="2000" FormatString="0.#"/>
+         <NumericUpDown Grid.Row="1" Grid.Column="1" Value="{Binding OriginalDraftBaseline, Mode=TwoWay}" Minimum="0" Maximum="3000" FormatString="0.#"/>
+        </Grid>
+        <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="4">
+         <Button Content="◄ 1pt" Command="{Binding NudgeCommand}" CommandParameter="left" ToolTip.Tip="Ajustar izquierda 1 pt" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
+         <Button Grid.Column="1" Content="► 1pt" Command="{Binding NudgeCommand}" CommandParameter="right" ToolTip.Tip="Ajustar derecha 1 pt" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
+         <Button Grid.Column="2" Content="▲ 1pt" Command="{Binding NudgeCommand}" CommandParameter="up" ToolTip.Tip="Ajustar arriba 1 pt" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
+         <Button Grid.Column="3" Content="▼ 1pt" Command="{Binding NudgeCommand}" CommandParameter="down" ToolTip.Tip="Ajustar abajo 1 pt" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
+        </Grid>
+       </StackPanel>
+
+       <TextBlock Text="ALINEACIÓN" Classes="caption"/>
+       <ComboBox SelectedIndex="{Binding OriginalDraftAlignmentIndex, Mode=TwoWay}" HorizontalAlignment="Stretch">
+        <ComboBoxItem>Izquierda</ComboBoxItem>
+        <ComboBoxItem>Centro</ComboBoxItem>
+        <ComboBoxItem>Derecha</ComboBoxItem>
+        <ComboBoxItem>Justificado</ComboBoxItem>
+       </ComboBox>
+
+       <TextBlock Text="TEXTO" Classes="caption" IsVisible="{Binding !IsMultiOriginalSelected}"/>
+       <TextBox Text="{Binding OriginalDraftText, Mode=TwoWay}" TextWrapping="Wrap" AcceptsReturn="True" MinHeight="65" MaxHeight="140" IsVisible="{Binding !IsMultiOriginalSelected}"/>
+
+       <TextBlock Text="TIPOGRAFÍA ORIGINAL" Classes="caption"/>
+       <Border Background="#24262B" Padding="9" CornerRadius="3"><TextBlock Text="{Binding OriginalFontLabel}"/></Border>
+
+       <TextBlock Text="TAMAÑO · pt" Classes="caption"/>
+       <NumericUpDown IsEnabled="{Binding SelectedOriginal.CanChangeFontSize}" ToolTip.Tip="El tamaño se bloquea si puede afectar a texto que hereda la fuente." Value="{Binding OriginalDraftSize, Mode=TwoWay}" Minimum="4" Maximum="144" FormatString="0.##"/>
+
+       <StackPanel Orientation="Horizontal" Spacing="12">
+        <CheckBox Content="Negrita" IsChecked="{Binding OriginalDraftBold, Mode=TwoWay}"/>
+        <CheckBox Content="Cursiva" IsChecked="{Binding OriginalDraftItalic, Mode=TwoWay}"/>
+       </StackPanel>
+
+       <TextBlock Text="COLOR · #RRGGBB" Classes="caption"/>
+       <TextBox Text="{Binding OriginalDraftColor, Mode=TwoWay}"/>
+
        <TextBlock Text="{Binding OriginalGeometryLabel}" Foreground="#7BD0FF" FontSize="11" TextWrapping="Wrap"/>
        <Button Content="Aplicar al texto original" Command="{Binding ApplyOriginalCommand}" Classes="primary" HorizontalAlignment="Stretch"/>
        <Button Content="Eliminar texto original" Command="{Binding DeleteOriginalCommand}" HorizontalAlignment="Stretch"/>
-       <TextBlock Text="Reflujo de párrafo automático. Respeta o sustituye la fuente con criterio y adapta la distribución." Classes="caption" TextWrapping="Wrap"/>
+       <TextBlock Text="Alineación, reflujo y ordenamiento de filas. Respeta la posición y línea base con respecto a las demás filas." Classes="caption" TextWrapping="Wrap"/>
       </StackPanel>
      </StackPanel></Border>
      <Border Classes="section"><StackPanel Spacing="8"><TextBlock Text="CONTENIDO AÑADIDO" Classes="caption"/>

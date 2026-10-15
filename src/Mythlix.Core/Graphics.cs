@@ -20,6 +20,8 @@ public sealed record GraphicObject {
  public byte[]? ImageData { get; init; }
  public TextAlignment Alignment { get; init; } = TextAlignment.Left;
  public string FontFamily { get; init; } = "Liberation Sans";
+ /// <summary>Distance from <see cref="Y"/> to the first text baseline. When set, text is drawn on exact baselines.</summary>
+ public double? Baseline { get; init; }
  public string Label => Kind switch {
   GraphicKind.Text => string.IsNullOrWhiteSpace(Text) ? "Texto" : Text[..Math.Min(Text.Length, 28)],
   GraphicKind.Image => "Imagen", GraphicKind.Rectangle => "Rectángulo",
