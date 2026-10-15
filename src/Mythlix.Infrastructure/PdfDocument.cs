@@ -2,7 +2,7 @@ using Mythlix.Core;
 using PdfSharp.Pdf;
 using PdfSharp.Pdf.IO;
 namespace Mythlix.Infrastructure;
-public sealed class PdfDocumentSession : IPdfDocument, IContentEditor, ISearchablePdfEditor, IPageDecorator {
+public sealed class PdfDocumentSession : IPdfDocument, IContentEditor, ISearchablePdfEditor, IPageDecorator, Mythlix.Core.TextEditing.ITextRunInspector {
  PdfDocument document;
  readonly Guid textDocumentId = Guid.NewGuid();
  public PdfDocumentSession(string path) {
@@ -41,6 +41,12 @@ public sealed class PdfDocumentSession : IPdfDocument, IContentEditor, ISearchab
  public Mythlix.Core.TextEditing.NativeRunAnalysis AnalyzeTextRuns(int page, long revision) {
   ValidatePage(page);
   return TextEditing.NativeRunExtractor.Analyze(document.Pages[page-1],GetPageGeometry(page),
+   new Mythlix.Core.TextEditing.TextDocumentContext(textDocumentId,page,revision));
+ }
+ /// <summary>Read-only inspection with native object identities and diagnostics.</summary>
+ public Mythlix.Core.TextEditing.TextRunInspectionReport InspectTextRuns(int page, long revision) {
+  ValidatePage(page);
+  return TextEditing.TextRunInspectionAdapter.Inspect(document.Pages[page-1],GetPageGeometry(page),
    new Mythlix.Core.TextEditing.TextDocumentContext(textDocumentId,page,revision));
  }
  /// <summary>Encoding snapshot for validated native runs; no document writes or fallback fonts.</summary>

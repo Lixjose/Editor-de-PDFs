@@ -55,3 +55,5 @@ OCR requiere Tesseract con modelos español/inglés. Ya están disponibles local
 Comprobación integrada de división y navegación: `dotnet run --project src/Mythlix.Desktop --no-build -- --split-smoke references/Mythlix-Documento-Tecnico.pdf`.
 
 La preparación de la nueva fase de estilos mixtos, su alcance y criterios de aceptación están en [Fase 1: fragmentos con procedencia](docs/text-editing/PHASE1_PREPARATION.md). Esta preparación conserva el motor y los flujos de edición actuales.
+
+La inspección de fragmentos está en **Texto original → Fragmentos · solo lectura → Analizar fragmentos**. Muestra estilos y diagnósticos a petición; no activa escritura mixta ni altera la edición existente.

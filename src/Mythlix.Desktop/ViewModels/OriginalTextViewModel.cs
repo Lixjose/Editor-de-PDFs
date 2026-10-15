@@ -44,6 +44,7 @@ public sealed partial class WorkspaceViewModel {
  public string SelectionLabel => HasOriginal ? (IsMultiOriginalSelected ? $"{SelectedOriginals.Count} filas · alineación y posición" : "Texto original · edición y alineación") : HasGraphic ? "Contenido añadido" : "Seleccione un elemento";
 
  partial void OnSelectedOriginalChanged(OriginalTextBlock? value) {
+  SyncInspectionSelection(value);
   if(value is not null) {
    SelectedGraphic = null;
    if(!SelectedOriginals.Contains(value)) {
@@ -118,6 +119,7 @@ public sealed partial class WorkspaceViewModel {
  }
 
  void RefreshOriginal(TextAnalysis analysis) {
+  ClearTextInspection();
   var ids = SelectedOriginals.Select(b => b.Id).ToHashSet();
   var primaryId = SelectedOriginal?.Id;
   OriginalBlocks.Clear();

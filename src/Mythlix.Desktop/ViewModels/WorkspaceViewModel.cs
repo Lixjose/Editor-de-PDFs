@@ -9,7 +9,7 @@ public sealed partial class DocumentViewModel : ObservableObject, IDisposable {
  public string Name => Path.GetFileName(Source);
  public IPdfDocument Document { get; }
  public string WorkingPath { get; } = Path.Combine(Path.GetTempPath(), "mythlix-" + Guid.NewGuid().ToString("N") + ".pdf");
- public long Revision {get;set;}
+ [ObservableProperty] private long revision;
  public long PreparedRevision {get;set;} = -1;
  public Stack<byte[]> Undo { get; } = new();
  public Stack<byte[]> Redo { get; } = new();
@@ -36,7 +36,7 @@ public sealed partial class WorkspaceViewModel : ObservableObject, IDisposable {
  public string PageLabel => Selected is null ? "Sin documento" : $"Página {CurrentPage} de {Selected.Document.PageCount}";
  public double DisplayWidth => 720 * Zoom / 100;
  partial void OnZoomChanged(double value) { OnPropertyChanged(nameof(DisplayWidth)); OnPropertyChanged(nameof(DisplayHeight)); }
- partial void OnSelectedChanged(DocumentViewModel? value) { CurrentPage = value?.Page ?? 1; RefreshPages(); OnPropertyChanged(nameof(IsEmpty)); SelectedGraphic=null; SelectedOriginal=null; ClearOcr(); }
+ partial void OnSelectedChanged(DocumentViewModel? value) { ClearTextInspection(); CurrentPage = value?.Page ?? 1; RefreshPages(); OnPropertyChanged(nameof(IsEmpty)); SelectedGraphic=null; SelectedOriginal=null; ClearOcr(); }
  public void RefreshPages() { Pages.Clear(); if(Selected is not null) for(int i=1;i<=Selected.Document.PageCount;i++) Pages.Add(i); OnPropertyChanged(nameof(PageLabel)); ResetThumbnails(); }
  public async Task OpenAsync(string path) {
   var existing = Documents.FirstOrDefault(d => d.Source == path);
@@ -166,5 +166,5 @@ public sealed partial class WorkspaceViewModel : ObservableObject, IDisposable {
   var doc=Selected; if(doc is null) return; Documents.Remove(doc); Selected=Documents.FirstOrDefault(); renderer.Invalidate(doc.WorkingPath); doc.Dispose();
   if(Selected is null) { var old=PageImage; PageImage=null; old?.Dispose(); old=Thumbnail; Thumbnail=null; old?.Dispose(); PageText=""; PageObjects.Clear(); SelectedGraphic=null; SelectedOriginal=null; OriginalBlocks.Clear(); ResetThumbnails(); Status="Abra un PDF para comenzar."; }
  }
- public void Dispose() { renderer.Clear(); foreach(var card in PageThumbnails)card.Dispose(); foreach(var doc in Documents) doc.Dispose(); PageImage?.Dispose(); Thumbnail?.Dispose(); }
+ public void Dispose() { ClearTextInspection(); renderer.Clear(); foreach(var card in PageThumbnails)card.Dispose(); foreach(var doc in Documents) doc.Dispose(); PageImage?.Dispose(); Thumbnail?.Dispose(); }
 }

@@ -1,6 +1,6 @@
 # Preparación de fase 1: fragmentos de estilo con procedencia
 
-Estado: pasos 1A, 1B y 1C implementados (contratos, extracción y edición del borrador); el nuevo modelo no está activado en el motor ni en la interfaz.
+Estado: pasos 1A–1D implementados. Los contratos, extracción y borrador tienen un adaptador de inspección de solo lectura; la composición/escritura mixta no está activada.
 Esta fase es distinta de la entrega histórica descrita en `../TEXT_ENGINE_PHASE1.md`.
 
 ## Objetivo y alcance
@@ -140,3 +140,20 @@ La instantánea del resolvedor no se actualiza si cambia la sesión PDF. La conf
 `ParagraphRunBufferTests` comprueba herencia de estilos, reemplazos entre estilos, procedencias recortadas y fusionadas, inventario de texto borrado, párrafo vacío, pegado con espacios y saltos, fronteras de grafemas, corrección de texto no codificable, fuentes/revisiones ajenas, anchos declarados incompletos y conservación del documento original.
 
 El siguiente paso es 1D: adaptador de solo lectura y diagnósticos por bloque para conectar esta base de forma controlada. La composición compartida y la escritura mixta siguen pendientes.
+
+
+## Resultado del paso 1D
+
+Se añadió `ITextRunInspector`, independiente de `IContentEditor`, y `PdfDocumentSession.InspectTextRuns(page, revision)`. El adaptador inventaría objetos BT/ET y reúne sus fragmentos, ajustes TJ y diagnósticos sin convertirlos en bloques editables del motor anterior. `TextBlockInspection` distingue si el análisis nuevo está disponible y si el escritor anterior ya admite ese objeto: son capacidades independientes.
+
+La correspondencia con `OriginalTextBlock` exige contexto de documento/página/revisión, ID de objeto y huella del stream. La ruta XML/TSV (`v:`) no se enlaza por semejanza de texto ni geometría. Esta correspondencia es informativa; no autoriza un commit ni sustituye la validación de recursos y huellas antes de escribir.
+
+Si el extractor rechaza el estado de página, el informe mantiene el diagnóstico global y localiza el error en el objeto correspondiente cuando el offset lo permite. Los demás objetos reciben `PageAnalysisRejected`; no se presentan resultados parciales como completos. Contenido mal formado añade `InventoryUnavailable`. Las capas Mythlix y OCR no se muestran como objetos originales.
+
+La interfaz incorpora un desplegable **Texto original → Fragmentos · solo lectura → Analizar fragmentos**. Permite consultar bloques, contenido de cada fragmento, familia, tamaño y diagnósticos. La selección del informe no mueve, reformatea ni selecciona contenido para escribir. No hay controles de edición mixta. El análisis solo se ejecuta a petición; no se añade al camino habitual de RenderAsync.
+
+El ViewModel comprueba documento/página/revisión antes de publicar un resultado asíncrono. Los informes se limpian al cambiar de documento, página, revisión o al refrescar los bloques tras renderizar. `DocumentViewModel.Revision` es observable para invalidar inmediatamente los informes; las suscripciones se liberan al limpiar/cerrar. Ningún informe se reutiliza automáticamente para otra revisión.
+
+Pruebas `TextRunInspectionTests`: agrupación por objeto, estilos mixtos, compatibilidad anterior, coincidencia por contexto/huella, rechazo de vínculos con respaldo, diagnósticos locales/globales, inventario incompleto, capas propias y conservación de píxeles en páginas compartidas. La prueba de ventana `--text-inspection-smoke references/Mythlix-Documento-Tecnico.pdf` verifica comandos, ausencia de cambios de historial/revisión durante la consulta y limpieza por cambio de contexto. El cambio de revisión dentro de esa prueba es una acción explícita del diagnóstico, no del adaptador.
+
+Los pasos 1A–1D dejan lista la base de estilos mixtos. El siguiente trabajo es definir e implementar la composición compartida (métricas/glifos y geometría), seguida del commit transaccional y sus pruebas visuales. Todavía no se ofrece edición y guardado de párrafos mixtos en la interfaz.

@@ -134,6 +134,34 @@
       <TextBlock Text="{Binding OriginalStatus}" FontSize="11" Foreground="#918FA1" TextWrapping="Wrap"/>
       <ListBox ItemsSource="{Binding OriginalBlocks}" SelectedItem="{Binding SelectedOriginal, Mode=TwoWay}" MaxHeight="115" IsEnabled="{Binding !Busy}"><ListBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Label}" FontSize="12" TextTrimming="CharacterEllipsis"/></DataTemplate></ListBox.ItemTemplate></ListBox>
 
+      <Expander Header="Fragmentos · solo lectura" HorizontalAlignment="Stretch">
+       <StackPanel Spacing="6" IsEnabled="{Binding !Busy}">
+        <Button Content="Analizar fragmentos" Command="{Binding InspectTextRunsCommand}" IsEnabled="{Binding !IsEmpty}" HorizontalAlignment="Stretch"/>
+        <TextBlock Text="{Binding TextInspectionStatus}" TextWrapping="Wrap" FontSize="11"/>
+        <TextBlock Text="{Binding TextInspectionDiagnostics}" TextWrapping="Wrap" Foreground="#E9B96E" FontSize="11"/>
+        <TextBlock Text="{Binding TextInspectionMatch}" TextWrapping="Wrap" FontSize="11"/>
+        <ListBox ItemsSource="{Binding InspectedTextBlocks}" SelectedItem="{Binding SelectedInspectedBlock, Mode=TwoWay}" MaxHeight="120">
+         <ListBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Label}" TextWrapping="Wrap" FontSize="11"/></DataTemplate></ListBox.ItemTemplate>
+        </ListBox>
+        <TextBlock Text="{Binding SelectedInspectedBlock.Summary}" TextWrapping="Wrap" FontSize="11"/>
+        <TextBlock Text="{Binding SelectedInspectionDiagnostics}" TextWrapping="Wrap" Foreground="#E9B96E" FontSize="11"/>
+        <ScrollViewer MaxHeight="180">
+         <ItemsControl ItemsSource="{Binding SelectedInspectedBlock.Runs}">
+          <ItemsControl.ItemTemplate><DataTemplate>
+           <StackPanel Margin="0,3">
+            <TextBlock Text="{Binding Run.Text}" TextWrapping="Wrap"/>
+            <StackPanel Orientation="Horizontal" Spacing="6">
+             <TextBlock Text="{Binding Run.Style.FamilyName}" FontSize="10" Foreground="#918FA1"/>
+             <TextBlock Text="{Binding Run.Style.FontSizePt}" FontSize="10" Foreground="#918FA1"/>
+             <TextBlock Text="pt" FontSize="10" Foreground="#918FA1"/>
+            </StackPanel>
+           </StackPanel>
+          </DataTemplate></ItemsControl.ItemTemplate>
+         </ItemsControl>
+        </ScrollViewer>
+       </StackPanel>
+      </Expander>
+
       <!-- Multi-selection Positioning and Alignment Tools -->
       <Border IsVisible="{Binding IsMultiOriginalSelected}" Background="#1F2028" BorderBrush="#4F46E5" BorderThickness="1" CornerRadius="4" Padding="8">
        <StackPanel Spacing="6">
