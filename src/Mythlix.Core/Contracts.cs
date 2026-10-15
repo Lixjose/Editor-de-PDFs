@@ -25,6 +25,7 @@ public interface IContentEditor {
  void ReplaceText(int page, OriginalTextBlock block, string replacement, double fontSize);
  void ReplaceText(int page, OriginalTextBlock block, TextEditOptions options);
  /// <summary>Moves several text lines as one atomic operation (all or nothing).</summary>
+ void ReplaceParagraph(int page, PdfParagraph paragraph, TextEditOptions options);
  void MoveTextBlocks(int page, IReadOnlyList<TextBlockMove> moves);
  /// <summary>Ascent/descent of the page fonts keyed by base font name (subset prefix removed).</summary>
  IReadOnlyDictionary<string, FontVerticalMetrics> GetFontMetrics(int page);

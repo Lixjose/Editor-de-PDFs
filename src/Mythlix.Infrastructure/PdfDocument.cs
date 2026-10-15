@@ -50,6 +50,22 @@ public sealed class PdfDocumentSession : IPdfDocument, IContentEditor, ISearchab
   }
   catch {Restore(before);throw;}
  }
+ public void ReplaceParagraph(int page, PdfParagraph paragraph, TextEditOptions options) {
+  if(paragraph.Lines.Count==0 || paragraph.Lines.Any(b=>b.Id.StartsWith("v:"))) throw new InvalidOperationException("El párrafo requiere bloques de texto nativos compatibles.");
+  var before=Snapshot();
+  try {
+   var originals=AnalyzeText(page).Blocks;
+   foreach(var line in paragraph.Lines)
+    if(!originals.Any(b=>b.Id==line.Id && b.Fingerprint==line.Fingerprint)) throw new InvalidOperationException("El párrafo cambió; vuelva a seleccionarlo.");
+   // Remove later rows first and refresh fingerprints after each stream mutation.
+   foreach(var line in paragraph.Lines.Skip(1).Reverse()) {
+    var current=AnalyzeText(page).Blocks.Single(b=>b.Id==line.Id);
+    ReplaceText(page,current,new TextEditOptions("",current.FontSize));
+   }
+   var first=AnalyzeText(page).Blocks.Single(b=>b.Id==paragraph.Lines[0].Id);
+   ReplaceText(page,first,options with {MaxWidth=paragraph.Bounds.Width, X=paragraph.Bounds.X, Baseline=paragraph.Lines[0].EffectiveBaseline, LineHeight=paragraph.LineHeight});
+  } catch {Restore(before);throw;}
+ }
  public void MoveTextBlocks(int page, IReadOnlyList<TextBlockMove> moves) {
   if(moves.Count == 0) return;
   var before = Snapshot();

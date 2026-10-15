@@ -16,7 +16,10 @@ public sealed record OriginalTextBlock(
     bool Italic = false,
     TextAlignment Alignment = TextAlignment.Left,
     int LineCount = 1,
-    double? Baseline = null) {
+    double? Baseline = null,
+    double CharacterSpacing = 0,
+    double WordSpacing = 0,
+    double HorizontalScale = 1) {
     public string Label => Text.Length == 0 ? "Texto vacío" : Text[..Math.Min(Text.Length, 38)];
     /// <summary>Known baseline or an estimate from the box (ascent ≈ 78 % of the line box).</summary>
     public double EffectiveBaseline => Baseline ?? Bounds.Y + Bounds.Height * 0.78;
@@ -35,7 +38,8 @@ public sealed record TextEditOptions(
     double? MaxWidth = null,
     bool Strict = false,
     double? X = null,
-    double? Baseline = null
+    double? Baseline = null,
+    double? LineHeight = null
 );
 
 /// <summary>Moves an original text line so that its left edge and baseline land on the given coordinates.</summary>

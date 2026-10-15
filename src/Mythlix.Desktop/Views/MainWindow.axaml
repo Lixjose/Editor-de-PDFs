@@ -68,8 +68,8 @@
                 SelectionBrush="#332563EB"
                 SelectionForegroundBrush="#000000"
                 BorderBrush="#3B82F6"
-                BorderThickness="1"
-                CornerRadius="2"
+                BorderThickness="0"
+                CornerRadius="0"
                 Padding="0"
                 Margin="0"
                 ScrollViewer.HorizontalScrollBarVisibility="Hidden"
@@ -88,12 +88,12 @@
          <Style Selector="TextBox:focus /template/ Border#PART_BorderElement">
           <Setter Property="Background" Value="#FFFFFF"/>
           <Setter Property="BorderBrush" Value="#3B82F6"/>
-          <Setter Property="BorderThickness" Value="1"/>
+          <Setter Property="BorderThickness" Value="0"/>
          </Style>
          <Style Selector="TextBox:pointerover /template/ Border#PART_BorderElement">
           <Setter Property="Background" Value="#FFFFFF"/>
           <Setter Property="BorderBrush" Value="#3B82F6"/>
-          <Setter Property="BorderThickness" Value="1"/>
+          <Setter Property="BorderThickness" Value="0"/>
          </Style>
         </TextBox.Styles>
        </TextBox>

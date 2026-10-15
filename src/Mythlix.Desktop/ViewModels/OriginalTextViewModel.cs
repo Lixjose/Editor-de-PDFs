@@ -167,6 +167,17 @@ public sealed partial class WorkspaceViewModel {
   NotifySelectionProperties();
  });
 
+ public Task CommitParagraphAsync(PdfParagraph paragraph, string text) => RunAsync(async()=> {
+  if(Selected is not {} doc || doc.Document is not IContentEditor editor)return;
+  var first=paragraph.Lines[0];
+  await Task.Run(()=> {
+   var before=doc.Document.Snapshot();
+   editor.ReplaceParagraph(CurrentPage,paragraph,new TextEditOptions(text,first.FontSize,first.Color,first.Bold,first.Italic,paragraph.Alignment,first.FontName));
+   doc.Undo.Push(before);doc.Redo.Clear();LimitUndo(doc);
+  });
+  doc.Modified=true;doc.Revision++;await RenderAsync();
+ });
+
  public Task CommitOriginalTextDirectAsync(OriginalTextBlock block, string newText, string? fontFamily = null, double? fontSize = null, string? color = null, bool? bold = null, bool? italic = null, double? x = null, double? baseline = null) => RunAsync(async () => {
   if(Selected is not {} doc || doc.Document is not IContentEditor editor) return;
   var options = new TextEditOptions(

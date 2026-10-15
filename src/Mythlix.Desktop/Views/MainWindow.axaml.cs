@@ -333,6 +333,7 @@ public partial class MainWindow : Window {
  });
  bool isDirectCanceling;
  bool isCommitting;
+ Mythlix.Core.PdfParagraph? activeEditingParagraph;
  Mythlix.Core.OriginalTextBlock? activeEditingOriginal;
  Mythlix.Core.GraphicObject? activeEditingGraphic;
 
@@ -345,12 +346,30 @@ public partial class MainWindow : Window {
  void OnTextDoubleClicked(Mythlix.Core.OriginalTextBlock block, Rect rect) {
   if(isCommitting) return;
   isDirectCanceling = false;
+  var paragraph=Mythlix.Core.PdfParagraph.Around(block,vm.OriginalBlocks);
+  activeEditingParagraph=vm.Geometry.Rotation==0 && paragraph.Lines.Count>1?paragraph:null;
+  if(activeEditingParagraph is not null) {
+   block=paragraph.Lines[0] with {Text=paragraph.Text,Bounds=paragraph.Bounds,Alignment=paragraph.Alignment,LineCount=paragraph.Lines.Count};
+   var bounds=vm.Geometry.ToDisplay(paragraph.Bounds);
+   var factor=PdfCanvas.Bounds.Width/vm.Geometry.DisplayWidth;
+   rect=new Rect(bounds.X*factor,bounds.Y*factor,bounds.Width*factor,bounds.Height*factor);
+  }
   activeEditingOriginal = block;
   activeEditingGraphic = null;
   vm.ActiveEditingOriginal = block;
 
   var scale = PdfCanvas.Bounds.Width / Math.Max(1, vm.Geometry.DisplayWidth);
-  DirectEditor.TextWrapping = Avalonia.Media.TextWrapping.NoWrap;
+  DirectEditor.TextWrapping = activeEditingParagraph is null ? Avalonia.Media.TextWrapping.NoWrap : Avalonia.Media.TextWrapping.Wrap;
+  DirectEditor.LetterSpacing=block.CharacterSpacing*scale;
+  DirectEditor.TextAlignment=block.Alignment switch {
+   Mythlix.Core.TextAlignment.Justify=>Avalonia.Media.TextAlignment.Justify,
+   Mythlix.Core.TextAlignment.Center=>Avalonia.Media.TextAlignment.Center,
+   Mythlix.Core.TextAlignment.Right=>Avalonia.Media.TextAlignment.Right,
+   _=>Avalonia.Media.TextAlignment.Left
+  };
+  DirectEditor.LineHeight=activeEditingParagraph?.LineHeight*scale ?? double.NaN;
+  DirectEditor.RenderTransformOrigin=new RelativePoint(0,0,RelativeUnit.Relative);
+  DirectEditor.RenderTransform=new ScaleTransform(block.HorizontalScale,1);
 
   var fontName = block.FontName ?? "Liberation Sans";
   if(fontName.Contains("Times", StringComparison.OrdinalIgnoreCase) ||
@@ -376,7 +395,7 @@ public partial class MainWindow : Window {
   } catch {
    DirectEditor.Foreground = Brushes.Black;
   }
-  FitEditorToBox(block.Text, block.FontSize * scale, rect);
+  FitEditorToBox(block.Text, block.FontSize * scale, rect, vm.Geometry.Rotation==0?block.EffectiveBaseline*scale:null);
   DirectEditor.Text = block.Text;
   DirectEditor.IsVisible = true;
 
@@ -388,6 +407,11 @@ public partial class MainWindow : Window {
   if(isCommitting) return;
   isDirectCanceling = false;
   activeEditingOriginal = null;
+  activeEditingParagraph = null;
+  DirectEditor.LetterSpacing=0;
+  DirectEditor.TextAlignment=Avalonia.Media.TextAlignment.Left;
+  DirectEditor.LineHeight=double.NaN;
+  DirectEditor.RenderTransform=null;
   activeEditingGraphic = obj;
   vm.ActiveEditingOriginal = null;
 
@@ -411,7 +435,7 @@ public partial class MainWindow : Window {
   } catch {
    DirectEditor.Foreground = Brushes.Black;
   }
-  FitEditorToBox(obj.Text, obj.FontSize * scale, rect);
+  FitEditorToBox(obj.Text, obj.FontSize * scale, rect, obj.Baseline.HasValue?(obj.Y+obj.Baseline.Value)*scale:null);
   DirectEditor.Text = obj.Text;
   DirectEditor.IsVisible = true;
 
@@ -419,47 +443,32 @@ public partial class MainWindow : Window {
   DirectEditor.SelectAll();
  }
 
- // Border (1px each side) of the inline editor; the template padding is 0.
- const double EditorChrome = 2;
  Rect editorBox;
+ double editorBaseline;
+ Avalonia.Media.TextFormatting.TextLayout MeasureEditorText(string text) =>
+  new(string.IsNullOrEmpty(text)?" ":text,new Typeface(DirectEditor.FontFamily,DirectEditor.FontStyle,DirectEditor.FontWeight),
+   DirectEditor.FontSize,Brushes.Black,textAlignment:DirectEditor.TextAlignment,textWrapping:DirectEditor.TextWrapping,
+   maxWidth:DirectEditor.TextWrapping==Avalonia.Media.TextWrapping.Wrap?Math.Max(1,editorBox.Width):double.PositiveInfinity,
+   lineHeight:DirectEditor.LineHeight,letterSpacing:DirectEditor.LetterSpacing);
 
- FormattedText MeasureEditorText(string text, double size) =>
-  new(string.IsNullOrEmpty(text) ? " " : text, System.Globalization.CultureInfo.CurrentCulture, FlowDirection.LeftToRight,
-   new Typeface(DirectEditor.FontFamily, DirectEditor.FontStyle, DirectEditor.FontWeight), size, Brushes.Black);
-
- /// <summary>
- /// Sizes the inline editor so the text keeps the original visual size: the font is never
- /// enlarged beyond the PDF size and is shrunk if the substitute font is wider than the
- /// original box. The box height follows the real line height so no scrollbar appears.
- /// </summary>
- void FitEditorToBox(string text, double desiredSize, Rect rect) {
-  editorBox = rect;
-  var size = Math.Max(1, desiredSize);
-  var measured = MeasureEditorText(text, size);
-  var textWidth = measured.WidthIncludingTrailingWhitespace;
-  if(rect.Width > 0 && textWidth > rect.Width) {
-   size = Math.Max(1, size * rect.Width / textWidth);
-   measured = MeasureEditorText(text, size);
-  }
-  DirectEditor.FontSize = size;
-  DirectEditor.MinHeight = 0;
-  DirectEditor.MinWidth = 0;
-  var height = Math.Max(rect.Height, measured.Height) + EditorChrome;
-  var width = Math.Max(rect.Width, measured.WidthIncludingTrailingWhitespace) + EditorChrome + 4;
-  Canvas.SetLeft(DirectEditor, rect.X - EditorChrome / 2);
-  // Center the line vertically over the original box so the text stays in place.
-  Canvas.SetTop(DirectEditor, Math.Max(0, rect.Y - (height - rect.Height) / 2));
-  DirectEditor.Width = width;
-  DirectEditor.Height = height;
+ void FitEditorToBox(string text,double desiredSize,Rect rect,double? baseline=null) {
+  var horizontalScale=DirectEditor.RenderTransform is ScaleTransform transform?transform.ScaleX:1;
+  editorBox=new Rect(rect.X,rect.Y,rect.Width/horizontalScale,rect.Height);
+  DirectEditor.FontSize=Math.Max(1,desiredSize);
+  DirectEditor.MinHeight=0;DirectEditor.MinWidth=0;
+  using var measured=MeasureEditorText(text);
+  editorBaseline=baseline ?? rect.Y+measured.Baseline;
+  Canvas.SetLeft(DirectEditor,rect.X);
+  Canvas.SetTop(DirectEditor,editorBaseline-measured.Baseline);
+  DirectEditor.Width=DirectEditor.TextWrapping==Avalonia.Media.TextWrapping.Wrap?editorBox.Width:Math.Max(editorBox.Width,measured.WidthIncludingTrailingWhitespace)+4;
+  DirectEditor.Height=Math.Max(rect.Height,measured.Height);
  }
 
- /// <summary>Grows the editor while typing instead of scrolling, keeping the font size fixed.</summary>
  void GrowEditorToText() {
-  var measured = MeasureEditorText(DirectEditor.Text ?? "", DirectEditor.FontSize);
-  var width = Math.Max(editorBox.Width, measured.WidthIncludingTrailingWhitespace) + EditorChrome + 4;
-  var height = Math.Max(editorBox.Height, measured.Height) + EditorChrome;
-  if(Math.Abs(width - DirectEditor.Width) > 0.5) DirectEditor.Width = width;
-  if(Math.Abs(height - DirectEditor.Height) > 0.5) DirectEditor.Height = height;
+  using var measured=MeasureEditorText(DirectEditor.Text ?? "");
+  DirectEditor.Width=DirectEditor.TextWrapping==Avalonia.Media.TextWrapping.Wrap?editorBox.Width:Math.Max(editorBox.Width,measured.WidthIncludingTrailingWhitespace)+4;
+  DirectEditor.Height=Math.Max(editorBox.Height,measured.Height);
+  Canvas.SetTop(DirectEditor,editorBaseline-measured.Baseline);
  }
 
  void DirectEditorKeyDown(object? sender, KeyEventArgs e) {
@@ -491,6 +500,8 @@ public partial class MainWindow : Window {
   isCommitting = true;
   try {
    DirectEditor.IsVisible = false;
+   var paragraph=activeEditingParagraph;
+   activeEditingParagraph=null;
    var targetOrig = activeEditingOriginal;
    var targetGraph = activeEditingGraphic;
    activeEditingOriginal = null;
@@ -500,7 +511,8 @@ public partial class MainWindow : Window {
    var newText = DirectEditor.Text ?? "";
    if(targetOrig is not null) {
     if(newText != targetOrig.Text) {
-     await vm.CommitOriginalTextDirectAsync(targetOrig, newText, targetOrig.FontName, targetOrig.FontSize, null, targetOrig.Bold, targetOrig.Italic, targetOrig.Bounds.X, targetOrig.EffectiveBaseline);
+     if(paragraph is not null) await vm.CommitParagraphAsync(paragraph,newText);
+     else await vm.CommitOriginalTextDirectAsync(targetOrig, newText, targetOrig.FontName, targetOrig.FontSize, null, targetOrig.Bold, targetOrig.Italic, targetOrig.Bounds.X, targetOrig.EffectiveBaseline);
     }
    } else if(targetGraph is not null) {
     if(newText != targetGraph.Text) {

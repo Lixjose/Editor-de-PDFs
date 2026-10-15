@@ -56,24 +56,39 @@ internal static class OriginalTextEditor {
         var unsafePage = streams.Any(s => s.Tokens.Any(t => t.Bytes is null && t.Value is "cm" or "W" or "W*" or "gs" or "BI" or "BDC" or "BMC"));
 
         foreach(var stream in streams) {
-            for(var n = 0; n < stream.Tokens.Count; n++) {
-                var op = stream.Tokens[n];
-                if(op.Bytes is not null || op.Value is not ("Tc" or "Tw" or "Ts" or "Tr" or "Tz")) continue;
-                if(n == 0 || !stream.Tokens[n - 1].Number(out var value) || Math.Abs(value - (op.Value == "Tz" ? 100 : 0)) > .0001) unsafePage = true;
+            bool inside=false;
+            for(var i=0;i<stream.Tokens.Count;i++) {
+                var token=stream.Tokens[i];
+                if(token.Bytes is not null)continue;
+                if(token.Value=="BT")inside=true;
+                if(token.Value=="ET")inside=false;
+                if(!inside && token.Value is "Tc" or "Tw" or "Tz" or "Ts" or "Tr")
+                    if(i==0 || !stream.Tokens[i-1].Number(out var state) || Math.Abs(state-(token.Value=="Tz"?100:0))>.0001)unsafePage=true;
             }
         }
-
         if(!geometry.CanEdit || unsafePage) {
             return ([], count, "Edición directa no compatible: esta página usa recortes, transformaciones, marcado o estados gráficos no compatibles con la edición directa inicial.");
         }
 
         var candidates = new List<Candidate>();
         var rejected = 0;
+        double[] textState=[0,0,100,0,0];
+        var states=new Stack<double[]>();
+        void Track(IReadOnlyList<Token> source,int index) {
+            var token=source[index];
+            if(token.Bytes is not null)return;
+            if(token.Value=="q")states.Push((double[])textState.Clone());
+            else if(token.Value=="Q") {if(states.Count>0)textState=states.Pop();}
+            else {
+                var slot=token.Value switch {"Tc"=>0,"Tw"=>1,"Tz"=>2,"Ts"=>3,"Tr"=>4,_=>-1};
+                if(slot>=0 && index>0 && source[index-1].Number(out var value))textState[slot]=value;
+            }
+        }
 
         foreach(var stream in streams) {
             var ordinal = 0;
             for(var start = 0; start < stream.Tokens.Count; start++) {
-                if(stream.Tokens[start].Value != "BT" || stream.Tokens[start].Bytes is not null) continue;
+                if(stream.Tokens[start].Value != "BT" || stream.Tokens[start].Bytes is not null) {Track(stream.Tokens,start);continue;}
                 var id = $"{stream.Index}:{ordinal++}";
                 var end = start + 1;
                 while(end < stream.Tokens.Count && stream.Tokens[end].Value != "ET") end++;
@@ -84,7 +99,8 @@ internal static class OriginalTextEditor {
                 var etEndToken = stream.Tokens[end];
                 var btByteLength = (etEndToken.Start + etEndToken.Length) - btByteStart;
 
-                var candidate = TryRead(page, geometry, stream.Index, id, stream.Data, block, btByteStart, btByteLength);
+                var candidate = TryRead(page, geometry, stream.Index, id, stream.Data, block, btByteStart, btByteLength, textState);
+                for(var i=start+1;i<end;i++)Track(stream.Tokens,i);
                 if(candidate is null) rejected++; else candidates.Add(candidate);
                 start = end;
             }
@@ -107,7 +123,7 @@ internal static class OriginalTextEditor {
         return (candidates, rejected, candidates.Count == 0 ? "Sin bloques compatibles. Fuentes CID/subconjuntos, párrafos fragmentados y texto en formularios XObject necesitan un analizador adicional." : $"{candidates.Count} bloques editables · {rejected} bloques no compatibles. Se conserva la fuente y la posición originales.");
     }
 
-    static Candidate? TryRead(PdfPage page, PageGeometry geometry, int stream, string id, byte[] bytes, Token[] tokens, int btByteStart, int btByteLength) {
+    static Candidate? TryRead(PdfPage page, PageGeometry geometry, int stream, string id, byte[] bytes, Token[] tokens, int btByteStart, int btByteLength, double[] initialState) {
         if(tokens.Any(t => t.Bytes is null && !t.Value.StartsWith('/') && !t.Number(out _) && !Allowed.Contains(t.Value))) return null;
 
         var shows = tokens.Select((t, i) => (t, i)).Where(p => p.t.Bytes is null && p.t.Value is "Tj" or "TJ").ToArray();
@@ -137,6 +153,20 @@ internal static class OriginalTextEditor {
         if(encoding is not ("" or "/StandardEncoding" or "/WinAnsiEncoding")) return null;
         var winAnsi = encoding == "/WinAnsiEncoding";
 
+        double characterSpacing=initialState[0], wordSpacing=initialState[1], horizontalScale=initialState[2]/100, rise=initialState[3];
+        if(initialState[4]!=0)return null;
+        for(var i=0;i<tokens.Length;i++) {
+            if(tokens[i].Bytes is not null || tokens[i].Value is not ("Tc" or "Tw" or "Tz" or "Ts" or "Tr")) continue;
+            if(i>=show.i || i==0 || !tokens[i-1].Number(out var state)) return null;
+            switch(tokens[i].Value) {
+                case "Tc": characterSpacing=state;break;
+                case "Tw": wordSpacing=state;break;
+                case "Tz": horizontalScale=state/100;break;
+                case "Ts": rise=state;break;
+                case "Tr": if(state!=0)return null;break;
+            }
+        }
+        if(horizontalScale<=0 || horizontalScale>10) return null;
         Token text;
         if(show.t.Value == "Tj") {
             if(show.i == 0 || tokens[show.i - 1].Bytes is null) return null;
@@ -167,7 +197,8 @@ internal static class OriginalTextEditor {
 
         if(text.Bytes!.Any(b => !double.IsFinite(widths[b]) || widths[b] <= 0)) return null;
 
-        var width = text.Bytes!.Sum(b => widths[b]) * size / 1000;
+        var width = (text.Bytes!.Sum(b => widths[b]) * size / 1000 + characterSpacing*Math.Max(0,text.Bytes!.Length-1) + wordSpacing*text.Bytes!.Count(b=>b==32))*horizontalScale;
+        y+=rise;
         var top = geometry.Height - y - metrics.Ascent * size / 1000;
         var height = (metrics.Ascent - metrics.Descent) * size / 1000;
         if(width <= 0 || x < 0 || top < 0 || x + width > geometry.Width || top + height > geometry.Height) return null;
@@ -201,7 +232,8 @@ internal static class OriginalTextEditor {
             Italic: italic,
             Alignment: TextAlignment.Left,
             LineCount: 1,
-            Baseline: baseline
+            Baseline: baseline,
+            CharacterSpacing: characterSpacing, WordSpacing: wordSpacing, HorizontalScale: horizontalScale
         );
 
         return new(blockObj, stream, text, tokens[font.i - 1], widths, winAnsi, btByteStart, btByteLength, name.TrimStart('/'), family, x, y);
@@ -219,6 +251,8 @@ internal static class OriginalTextEditor {
             throw new InvalidOperationException("El bloque cambió; vuelva a seleccionarlo antes de editar.");
 
         if(options.Strict) {
+            if(candidate.Block.CharacterSpacing!=0 || candidate.Block.WordSpacing!=0 || candidate.Block.HorizontalScale!=1)
+                throw new InvalidOperationException("El espaciado original requiere edición con reflujo.");
             // Strict Phase 3 backward-compatible single line mode
             if(options.Text.Any(char.IsControl))
                 throw new InvalidOperationException("Este bloque admite una sola línea; no use caracteres de control.");
@@ -268,16 +302,21 @@ internal static class OriginalTextEditor {
         if(options.Text.Length > 100000 || !double.IsFinite(options.FontSize) || options.FontSize < 4 || options.FontSize > 144)
             throw new InvalidOperationException("Tamaño de fuente: 4–144 pt.");
 
+        if(options.LineHeight is {} lineHeight && (!double.IsFinite(lineHeight) || lineHeight<=0))
+            throw new InvalidOperationException("El interlineado debe ser positivo y finito.");
         var targetBaseFont = FontSubstitutionService.ResolveBaseFont(options.FontFamily ?? candidate.BaseFont, options.Bold, options.Italic);
         var targetMetrics = FontSubstitutionService.GetMetrics(targetBaseFont);
         var targetWidths = targetMetrics.Widths.Select(w => (double)w).ToArray();
         var fontRes = FontSubstitutionService.EnsureFontResource(page, document, targetBaseFont);
 
         double maxWidth = options.MaxWidth ?? Math.Max(candidate.Block.Bounds.Width, 100);
-        var lines = ParagraphReflow.Reflow(options.Text, options.FontSize, targetWidths, WindowsEncoding, maxWidth, options.Alignment);
+        var characterSpacing=candidate.Block.CharacterSpacing;
+        var horizontalScale=candidate.Block.HorizontalScale;
+        var lines = ParagraphReflow.Reflow(options.Text, options.FontSize, targetWidths, WindowsEncoding, maxWidth/horizontalScale, options.Alignment, characterSpacing, candidate.Block.WordSpacing);
 
         var sb = new StringBuilder();
-        sb.AppendLine("BT");
+        sb.AppendLine("q\nBT\n0 Tw 0 Ts 0 Tr");
+        sb.AppendLine($"{characterSpacing.ToString("G17",CultureInfo.InvariantCulture)} Tc {(horizontalScale*100).ToString("G17",CultureInfo.InvariantCulture)} Tz");
         sb.AppendLine($"/{fontRes} {options.FontSize.ToString("G17", CultureInfo.InvariantCulture)} Tf");
 
         if(!string.IsNullOrEmpty(options.Color) && options.Color.Length == 7 && options.Color[0] == '#') {
@@ -295,17 +334,20 @@ internal static class OriginalTextEditor {
         if(lines.Count == 0) {
             sb.AppendLine($"1 0 0 1 {startX.ToString("G17", CultureInfo.InvariantCulture)} {startBaselineY.ToString("G17", CultureInfo.InvariantCulture)} Tm () Tj");
         } else {
-            double leading = options.FontSize * 1.25;
+            var header=sb.ToString();
+            double leading = options.LineHeight ?? options.FontSize * 1.25;
             for(var i = 0; i < lines.Count; i++) {
+                if(i>0) {sb.AppendLine("ET\nQ");sb.Append(header);}
                 var line = lines[i];
-                double lineX = startX + line.XOffset;
+                double lineX = startX + line.XOffset*horizontalScale;
                 double lineY = startBaselineY - (i * leading);
                 sb.AppendLine($"1 0 0 1 {lineX.ToString("G17", CultureInfo.InvariantCulture)} {lineY.ToString("G17", CultureInfo.InvariantCulture)} Tm");
+                sb.AppendLine($"{line.WordSpacing.ToString("G17", CultureInfo.InvariantCulture)} Tw");
                 sb.Append(Encoding.ASCII.GetString(ContentTokenizer.Literal(line.EncodedBytes)));
                 sb.AppendLine(" Tj");
             }
         }
-        sb.Append("ET");
+        sb.Append("ET\nQ");
 
         var newBytes = Encoding.ASCII.GetBytes(sb.ToString());
         var oldDict = page.Contents.Elements.GetDictionary(candidate.Stream)!;

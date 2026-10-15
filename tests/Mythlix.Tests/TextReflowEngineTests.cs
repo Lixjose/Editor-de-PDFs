@@ -201,6 +201,86 @@ public sealed class TextReflowEngineTests : IDisposable {
         Assert.Equal("Liberation Sans", savedGraphics[0].FontFamily);
     }
 
+    [Fact]
+    public void JustificationFillsWrappedLinesAndResetsAtParagraphEnd() {
+        var widths=StandardFontMetrics.Fonts["Helvetica"].Widths.Select(w=>(double)w).ToArray();
+        var lines=ParagraphReflow.Reflow("Uno dos tres cuatro cinco seis siete ocho nueve diez\nFinal",12,widths,Encoding.ASCII,100,TextAlignment.Justify);
+        Assert.True(lines.Count>2);
+        foreach(var line in lines.Take(lines.Count-2)) {
+            Assert.True(line.WordSpacing>0);
+            Assert.Equal(100,line.Width+line.Text.Count(c=>c==' ')*line.WordSpacing,6);
+        }
+        Assert.Equal(0,lines[^2].WordSpacing);
+        Assert.Equal(0,lines[^1].WordSpacing);
+    }
+
+    [Fact]
+    public void SupportedTextSpacingProducesAccurateBoundsAndBaseline() {
+        CreateSamplePdf("BT /F1 14 Tf 2 Tc 3 Tw 95 Tz 2 Ts 1 0 0 1 50 700 Tm (Uno dos) Tj ET");
+        using var doc=new PdfDocumentSession(Source);
+        var row=Assert.Single(doc.AnalyzeText(1).Blocks);
+        var widths=StandardFontMetrics.Fonts["Helvetica"].Widths.Select(w=>(double)w).ToArray();
+        var expected=(ParagraphReflow.MeasureText("Uno dos",14,widths,Encoding.ASCII)+6*2+3)*0.95;
+        Assert.Equal(expected,row.Bounds.Width,6);
+        Assert.Equal(90,row.EffectiveBaseline,6);
+        Assert.Equal(2,row.CharacterSpacing);Assert.Equal(3,row.WordSpacing);Assert.Equal(.95,row.HorizontalScale);
+    }
+
+    [Fact]
+    public async Task ParagraphReplacementReflowsJustifiesAndRemainsEditableAfterReopen() {
+        CreateSamplePdf("BT /F1 14 Tf 1 0 0 1 50 700 Tm (Una primera linea) Tj ET\nBT /F1 14 Tf 1 0 0 1 50 682.5 Tm (Una segunda linea) Tj ET\nBT /F1 14 Tf 1 0 0 1 50 665 Tm (Ultima) Tj ET");
+        using var doc=new PdfDocumentSession(Source);
+        var rows=doc.AnalyzeText(1).Blocks;
+        var detected=PdfParagraph.Around(rows[1],rows);
+        Assert.Equal(3,detected.Lines.Count);
+        var paragraph=detected with {Alignment=TextAlignment.Justify};
+        var before=doc.Snapshot();
+        doc.ReplaceParagraph(1,paragraph,new TextEditOptions("Texto nuevo para comprobar que varias palabras quedan justificadas y se pueden volver a editar",14,Alignment:TextAlignment.Justify));
+        await doc.SaveCopyAsync(Output);
+        using(var reopened=new PdfDocumentSession(Output)) {
+            var edited=reopened.AnalyzeText(1).Blocks;
+            Assert.True(edited.Count>1);
+            Assert.True(edited[0].WordSpacing>0);
+            Assert.Equal(0,edited[^1].WordSpacing);
+            Assert.DoesNotContain(edited,b=>b.Text.Contains("segunda"));
+            var text=await new PopplerRenderer().ExtractTextAsync(Output,1,CancellationToken.None);
+            Assert.Contains("justificadas",text);
+            Assert.DoesNotContain("primera",text);
+        }
+        doc.Restore(before);
+        Assert.Equal(rows.Select(b=>b.Text),doc.AnalyzeText(1).Blocks.Select(b=>b.Text));
+    }
+
+    [Fact]
+    public void ParagraphReplacementRejectsStaleRowsWithoutChangingDocument() {
+        using var doc=new PdfDocumentSession(Source);
+        var row=Assert.Single(doc.AnalyzeText(1).Blocks);
+        var paragraph=PdfParagraph.Around(row,[row]) with {Lines=[row with {Fingerprint="stale"}]};
+        Assert.Throws<InvalidOperationException>(()=>doc.ReplaceParagraph(1,paragraph,new("Cambio",14)));
+        Assert.Equal(row.Text,Assert.Single(doc.AnalyzeText(1).Blocks).Text);
+    }
+
+    [Fact]
+    public async Task ReflowPreservesHorizontalScaleAndCharacterSpacing() {
+        CreateSamplePdf("BT /F1 14 Tf 1 Tc 2 Tw 95 Tz 1 0 0 1 50 700 Tm (Uno dos tres) Tj ET");
+        using var doc=new PdfDocumentSession(Source);
+        var row=Assert.Single(doc.AnalyzeText(1).Blocks);
+        doc.ReplaceText(1,row,new TextEditOptions("Otro texto",14,MaxWidth:200));
+        await doc.SaveCopyAsync(Output);
+        using var reopened=new PdfDocumentSession(Output);
+        var edited=Assert.Single(reopened.AnalyzeText(1).Blocks);
+        Assert.Equal(.95,edited.HorizontalScale);Assert.Equal(1,edited.CharacterSpacing);Assert.Equal(2,edited.WordSpacing);
+        Assert.Equal(row.EffectiveBaseline,edited.EffectiveBaseline,6);
+    }
+
+    [Fact]
+    public void ParagraphDetectionDoesNotCombineColumnsOrDifferentFonts() {
+        var first=new OriginalTextBlock("0:0","Columna A","Helvetica",12,new(30,40,150,12),"fp",Baseline:50);
+        var column=first with {Id="0:1",Bounds=new(300,55,150,12),Baseline=65};
+        var otherFont=first with {Id="0:2",FontName="Courier",Bounds=new(30,55,150,12),Baseline=65};
+        Assert.Single(PdfParagraph.Around(first,[first,column,otherFont]).Lines);
+    }
+
     public void Dispose() {
         if(Directory.Exists(directory)) Directory.Delete(directory, true);
     }
