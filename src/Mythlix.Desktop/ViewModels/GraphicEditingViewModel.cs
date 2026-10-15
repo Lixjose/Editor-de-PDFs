@@ -60,6 +60,16 @@ public sealed partial class WorkspaceViewModel {
   SelectedGraphic=PageObjects.FirstOrDefault(item=>item.Id==selectedId);
  }
  public Task CommitObjectAsync(GraphicObject item) => RunAsync(()=>ChangeGraphicsAsync(PageObjects.Select(o=>o.Id==item.Id?item:o).ToArray(),item.Id));
+ public Task CommitGraphicTextDirectAsync(GraphicObject obj, string newText, double? fontSize = null, string? color = null, bool? bold = null, bool? italic = null) => RunAsync(() => {
+  var updated = obj with {
+   Text = newText,
+   FontSize = fontSize ?? obj.FontSize,
+   Color = color ?? obj.Color,
+   Bold = bold ?? obj.Bold,
+   Italic = italic ?? obj.Italic
+  };
+  return ChangeGraphicsAsync(PageObjects.Select(o => o.Id == obj.Id ? updated : o).ToArray(), obj.Id);
+ });
  async Task InsertAsync(GraphicKind kind, byte[]? image=null, double ratio=1) {
   if(Selected is null) { Status="Abra un PDF antes de añadir contenido."; return; }
   var item=Geometry.Clamp(new GraphicObject { Kind=kind, Text=ObjectText, ImageData=image,

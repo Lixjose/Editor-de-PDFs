@@ -115,7 +115,8 @@ public sealed class PdfDocumentSession : IPdfDocument, IContentEditor, ISearchab
       if(innerTokens[k].Bytes is null && innerTokens[k].Value is "Td" or "TD" or "Tm") {
        if(k >= 2 && innerTokens[k-2].Number(out var tx) && innerTokens[k-1].Number(out var ty)) {
         var topY = geom.Height - ty;
-        if(Math.Abs(tx - block.Bounds.X) < 20 && Math.Abs(topY - block.Bounds.Y) < 30) {
+        if(tx >= block.Bounds.X - 30 && tx <= block.Bounds.X + block.Bounds.Width + 30 &&
+           topY >= block.Bounds.Y - 12 && topY <= block.Bounds.Y + block.Bounds.Height + 15) {
          isMatch = true;
          break;
         }
@@ -124,9 +125,13 @@ public sealed class PdfDocumentSession : IPdfDocument, IContentEditor, ISearchab
      }
 
      if(!isMatch && !string.IsNullOrWhiteSpace(block.Text)) {
-      var sample = block.Text[..Math.Min(block.Text.Length, 8)];
-      if(innerTokens.Any(t => t.Bytes is not null && System.Text.Encoding.ASCII.GetString(t.Bytes).Contains(sample))) {
-       isMatch = true;
+      foreach(var pLine in block.Text.Split('\n')) {
+       if(pLine.Trim().Length < 4) continue;
+       var sample = pLine.Trim()[..Math.Min(pLine.Trim().Length, 8)];
+       if(innerTokens.Any(t => t.Bytes is not null && System.Text.Encoding.ASCII.GetString(t.Bytes).Contains(sample))) {
+        isMatch = true;
+        break;
+       }
       }
      }
 

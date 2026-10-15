@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Media;
 using Avalonia.Platform.Storage;
 using Mythlix.Desktop.ViewModels;
 namespace Mythlix.Desktop.Views;
@@ -13,8 +14,14 @@ public partial class MainWindow : Window {
   InitializeComponent(); DataContext=vm; Closing += OnClosing;
   PdfCanvas.TextDoubleClicked += OnTextDoubleClicked;
   PdfCanvas.GraphicTextDoubleClicked += OnGraphicTextDoubleClicked;
+  PdfCanvas.CanvasPointerPressed += OnCanvasPointerPressed;
+  FloatFontCombo.ItemsSource = new[] { "Montserrat", "Liberation Sans", "Helvetica", "Times New Roman", "Arial", "Courier" };
   vm.PropertyChanged+=(_,e)=>{
-   if(e.PropertyName is nameof(vm.CurrentPage) or nameof(vm.PageImage) or nameof(vm.Selected)) DirectEditor.IsVisible = false;
+   if(e.PropertyName is nameof(vm.CurrentPage) or nameof(vm.PageImage) or nameof(vm.Selected)) {
+    DirectEditor.IsVisible = false;
+    FloatingFormatBar.IsVisible = false;
+    vm.ActiveEditingOriginal = null;
+   }
    if(autoFit && e.PropertyName is nameof(vm.PageImage) or nameof(vm.Geometry))FitPageToView();
   };
   Viewport.PropertyChanged+=(_,e)=>{if(autoFit && e.Property==BoundsProperty)FitPageToView();};
@@ -311,32 +318,104 @@ public partial class MainWindow : Window {
   await vm.InsertImageAsync(bytes,ratio);
  });
  bool isDirectCanceling;
+ Mythlix.Core.OriginalTextBlock? activeEditingOriginal;
+ Mythlix.Core.GraphicObject? activeEditingGraphic;
+
+ void OnCanvasPointerPressed() {
+  if(DirectEditor.IsVisible) {
+   _ = CommitDirectEditAsync();
+  }
+ }
+
+ void FloatFontChanged(object? sender, SelectionChangedEventArgs e) {
+  if(FloatFontCombo.SelectedItem is string fontName && !string.IsNullOrWhiteSpace(fontName)) {
+   try { DirectEditor.FontFamily = new FontFamily(fontName); } catch {}
+  }
+ }
+
+ void FloatSizeChanged(object? sender, NumericUpDownValueChangedEventArgs e) {
+  if(e.NewValue is {} sz) {
+   var scale = PdfCanvas.Bounds.Width / Math.Max(1, vm.Geometry.DisplayWidth);
+   DirectEditor.FontSize = Math.Max(8, Math.Round((double)sz * scale, 1));
+  }
+ }
+
+ void FloatBoldClick(object? sender, RoutedEventArgs e) {
+  DirectEditor.FontWeight = DirectEditor.FontWeight == Avalonia.Media.FontWeight.Bold ? Avalonia.Media.FontWeight.Normal : Avalonia.Media.FontWeight.Bold;
+ }
+
+ void FloatItalicClick(object? sender, RoutedEventArgs e) {
+  DirectEditor.FontStyle = DirectEditor.FontStyle == Avalonia.Media.FontStyle.Italic ? Avalonia.Media.FontStyle.Normal : Avalonia.Media.FontStyle.Italic;
+ }
+
  void OnTextDoubleClicked(Mythlix.Core.OriginalTextBlock block, Rect rect) {
   isDirectCanceling = false;
+  activeEditingOriginal = block;
+  activeEditingGraphic = null;
+  vm.ActiveEditingOriginal = block;
+
   var scale = PdfCanvas.Bounds.Width / Math.Max(1, vm.Geometry.DisplayWidth);
   Canvas.SetLeft(DirectEditor, Math.Clamp(rect.X - 3, 0, Math.Max(0, vm.DisplayWidth - 40)));
   Canvas.SetTop(DirectEditor, Math.Clamp(rect.Y - 2, 0, Math.Max(0, vm.DisplayHeight - 20)));
   DirectEditor.Width = Math.Clamp(rect.Width + 16, 60, Math.Max(60, vm.DisplayWidth - rect.X));
-  DirectEditor.Height = Math.Clamp(rect.Height + 4, 24, Math.Max(24, vm.DisplayHeight - rect.Y));
+  DirectEditor.Height = Math.Clamp(rect.Height + 6, 26, Math.Max(26, vm.DisplayHeight - rect.Y));
   DirectEditor.FontSize = Math.Max(10, Math.Round(block.FontSize * scale, 1));
+  try { DirectEditor.FontFamily = new FontFamily(block.FontName); } catch {}
+  DirectEditor.FontWeight = block.Bold ? Avalonia.Media.FontWeight.Bold : Avalonia.Media.FontWeight.Normal;
+  DirectEditor.FontStyle = block.Italic ? Avalonia.Media.FontStyle.Italic : Avalonia.Media.FontStyle.Normal;
+  try {
+   var c = string.IsNullOrWhiteSpace(block.Color) ? "#000000" : block.Color;
+   DirectEditor.Foreground = Brush.Parse(c);
+  } catch {
+   DirectEditor.Foreground = Brushes.Black;
+  }
   DirectEditor.Text = block.Text;
   DirectEditor.IsVisible = true;
+
+  FloatFontCombo.SelectedItem = block.FontName;
+  FloatSizeNumeric.Value = (decimal)block.FontSize;
+  Canvas.SetLeft(FloatingFormatBar, Math.Clamp(rect.X, 0, Math.Max(0, vm.DisplayWidth - 280)));
+  Canvas.SetTop(FloatingFormatBar, rect.Y > 38 ? rect.Y - 36 : rect.Y + rect.Height + 6);
+  FloatingFormatBar.IsVisible = true;
+
   DirectEditor.Focus();
   DirectEditor.SelectAll();
  }
+
  void OnGraphicTextDoubleClicked(Mythlix.Core.GraphicObject obj, Rect rect) {
   isDirectCanceling = false;
+  activeEditingOriginal = null;
+  activeEditingGraphic = obj;
+  vm.ActiveEditingOriginal = null;
+
   var scale = PdfCanvas.Bounds.Width / Math.Max(1, vm.Geometry.DisplayWidth);
   Canvas.SetLeft(DirectEditor, Math.Clamp(rect.X - 3, 0, Math.Max(0, vm.DisplayWidth - 40)));
   Canvas.SetTop(DirectEditor, Math.Clamp(rect.Y - 2, 0, Math.Max(0, vm.DisplayHeight - 20)));
   DirectEditor.Width = Math.Clamp(rect.Width + 16, 60, Math.Max(60, vm.DisplayWidth - rect.X));
-  DirectEditor.Height = Math.Clamp(rect.Height + 4, 24, Math.Max(24, vm.DisplayHeight - rect.Y));
+  DirectEditor.Height = Math.Clamp(rect.Height + 6, 26, Math.Max(26, vm.DisplayHeight - rect.Y));
   DirectEditor.FontSize = Math.Max(10, Math.Round(obj.FontSize * scale, 1));
+  try { DirectEditor.FontFamily = new FontFamily(string.IsNullOrWhiteSpace(obj.FontFamily) ? "Liberation Sans" : obj.FontFamily); } catch {}
+  DirectEditor.FontWeight = obj.Bold ? Avalonia.Media.FontWeight.Bold : Avalonia.Media.FontWeight.Normal;
+  DirectEditor.FontStyle = obj.Italic ? Avalonia.Media.FontStyle.Italic : Avalonia.Media.FontStyle.Normal;
+  try {
+   var c = string.IsNullOrWhiteSpace(obj.Color) ? "#000000" : obj.Color;
+   DirectEditor.Foreground = Brush.Parse(c);
+  } catch {
+   DirectEditor.Foreground = Brushes.Black;
+  }
   DirectEditor.Text = obj.Text;
   DirectEditor.IsVisible = true;
+
+  FloatFontCombo.SelectedItem = string.IsNullOrWhiteSpace(obj.FontFamily) ? "Liberation Sans" : obj.FontFamily;
+  FloatSizeNumeric.Value = (decimal)obj.FontSize;
+  Canvas.SetLeft(FloatingFormatBar, Math.Clamp(rect.X, 0, Math.Max(0, vm.DisplayWidth - 280)));
+  Canvas.SetTop(FloatingFormatBar, rect.Y > 38 ? rect.Y - 36 : rect.Y + rect.Height + 6);
+  FloatingFormatBar.IsVisible = true;
+
   DirectEditor.Focus();
   DirectEditor.SelectAll();
  }
+
  void DirectEditorKeyDown(object? sender, KeyEventArgs e) {
   if(e.Key == Key.Enter && !e.KeyModifiers.HasFlag(KeyModifiers.Shift)) {
    e.Handled = true;
@@ -345,26 +424,40 @@ public partial class MainWindow : Window {
    e.Handled = true;
    isDirectCanceling = true;
    DirectEditor.IsVisible = false;
+   FloatingFormatBar.IsVisible = false;
+   vm.ActiveEditingOriginal = null;
   }
  }
+
  void DirectEditorLostFocus(object? sender, RoutedEventArgs e) {
   if(!isDirectCanceling && DirectEditor.IsVisible) {
    _ = CommitDirectEditAsync();
   }
  }
+
  async Task CommitDirectEditAsync() {
   if(isDirectCanceling || !DirectEditor.IsVisible) return;
   DirectEditor.IsVisible = false;
+  FloatingFormatBar.IsVisible = false;
+  var targetOrig = activeEditingOriginal;
+  var targetGraph = activeEditingGraphic;
+  activeEditingOriginal = null;
+  activeEditingGraphic = null;
+  vm.ActiveEditingOriginal = null;
+
   var newText = DirectEditor.Text ?? "";
-  if(vm.SelectedOriginal is not null) {
-   if(newText != vm.SelectedOriginal.Text) {
-    vm.OriginalDraftText = newText;
-    await vm.ApplyOriginalCommand.ExecuteAsync(null);
+  var fontFam = FloatFontCombo.SelectedItem as string;
+  var fontSize = FloatSizeNumeric.Value is {} fsz ? (double)fsz : (double?)null;
+  var isBold = DirectEditor.FontWeight == Avalonia.Media.FontWeight.Bold;
+  var isItalic = DirectEditor.FontStyle == Avalonia.Media.FontStyle.Italic;
+
+  if(targetOrig is not null) {
+   if(newText != targetOrig.Text || fontFam != targetOrig.FontName || (fontSize.HasValue && Math.Abs(fontSize.Value - targetOrig.FontSize) > 0.1) || isBold != targetOrig.Bold || isItalic != targetOrig.Italic) {
+    await vm.CommitOriginalTextDirectAsync(targetOrig, newText, fontFam, fontSize, null, isBold, isItalic);
    }
-  } else if(vm.SelectedGraphic is not null) {
-   if(newText != vm.SelectedGraphic.Text) {
-    vm.ObjectText = newText;
-    await vm.ApplyGraphicCommand.ExecuteAsync(null);
+  } else if(targetGraph is not null) {
+   if(newText != targetGraph.Text || (fontSize.HasValue && Math.Abs(fontSize.Value - targetGraph.FontSize) > 0.1) || isBold != targetGraph.Bold || isItalic != targetGraph.Italic) {
+    await vm.CommitGraphicTextDirectAsync(targetGraph, newText, fontSize, null, isBold, isItalic);
    }
   }
  }

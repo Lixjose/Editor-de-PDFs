@@ -14,12 +14,14 @@ public sealed class PageCanvas : Control {
  
  public event Action<OriginalTextBlock, Rect>? TextDoubleClicked;
  public event Action<GraphicObject, Rect>? GraphicTextDoubleClicked;
+ public event Action? CanvasPointerPressed;
 
  GraphicObject? dragObject;
  ObjectBounds? preview;
  Point start;
  bool resizing;
  bool moved;
+ OriginalTextBlock? hoveredOriginal;
  protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change) {
   base.OnPropertyChanged(change);
   if(change.Property==WorkspaceProperty) {
@@ -35,7 +37,17 @@ public sealed class PageCanvas : Control {
   base.Render(context);
   var vm=Workspace;if(vm?.PageImage is not {} image)return;
   context.DrawImage(image,new Rect(0,0,image.PixelSize.Width,image.PixelSize.Height),new Rect(Bounds.Size));
-  if(vm.SelectedOriginal is {} original) {
+  if(vm.ActiveEditingOriginal is {} editing) {
+   var factor=Bounds.Width/vm.Geometry.DisplayWidth;var box=vm.Geometry.ToDisplay(editing.Bounds);
+   var maskRect=new Rect(box.X*factor-2,box.Y*factor-2,box.Width*factor+4,box.Height*factor+4);
+   context.DrawRectangle(Brushes.White,null,maskRect);
+  }
+  if(hoveredOriginal is {} hovered && hovered != vm.SelectedOriginal && hovered != vm.ActiveEditingOriginal) {
+   var factor=Bounds.Width/vm.Geometry.DisplayWidth;var box=vm.Geometry.ToDisplay(hovered.Bounds);
+   var hoverRect=new Rect(box.X*factor,box.Y*factor,box.Width*factor,box.Height*factor);
+   context.DrawRectangle(new SolidColorBrush(Color.Parse("#082563EB")),new Pen(Brush.Parse("#402563EB"),1),hoverRect);
+  }
+  if(vm.SelectedOriginal is {} original && original != vm.ActiveEditingOriginal) {
    var factor=Bounds.Width/vm.Geometry.DisplayWidth;var box=vm.Geometry.ToDisplay(original.Bounds);
    var rect=new Rect(box.X*factor,box.Y*factor,box.Width*factor,box.Height*factor);
    context.DrawRectangle(new SolidColorBrush(Color.Parse("#194F46E5")),new Pen(Brush.Parse("#C3C0FF"),1.5),rect);return;
@@ -52,6 +64,7 @@ public sealed class PageCanvas : Control {
  }
  protected override void OnPointerPressed(PointerPressedEventArgs e) {
   base.OnPointerPressed(e);
+  CanvasPointerPressed?.Invoke();
   var vm=Workspace;if(vm is null || vm.Busy || !vm.Geometry.CanEdit || !e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)return;
   var scale=Bounds.Width/vm.Geometry.DisplayWidth;
   var p=e.GetPosition(this);start=new(p.X/scale,p.Y/scale);
@@ -85,7 +98,12 @@ public sealed class PageCanvas : Control {
   var scale=Bounds.Width/vm.Geometry.DisplayWidth;var p=e.GetPosition(this);
   if(dragObject is null && vm.Geometry.CanEdit) {
    var scaledPt = new Point(p.X/scale, p.Y/scale);
-   var overText = vm.OriginalBlocks.Any(item => vm.Geometry.ToDisplay(item.Bounds).Contains(scaledPt.X, scaledPt.Y))
+   var overOrig = vm.OriginalBlocks.FirstOrDefault(item => vm.Geometry.ToDisplay(item.Bounds).Contains(scaledPt.X, scaledPt.Y));
+   if(hoveredOriginal != overOrig) {
+    hoveredOriginal = overOrig;
+    InvalidateVisual();
+   }
+   var overText = overOrig is not null
     || vm.PageObjects.Any(item => item.Kind == GraphicKind.Text && vm.Geometry.ToDisplay(new(item.X, item.Y, item.Width, item.Height)).Contains(scaledPt.X, scaledPt.Y));
    Cursor = overText ? new Cursor(StandardCursorType.Ibeam) : Cursor.Default;
    return;
@@ -110,4 +128,5 @@ public sealed class PageCanvas : Control {
   InvalidateVisual();e.Handled=true;
  }
  protected override void OnPointerCaptureLost(PointerCaptureLostEventArgs e) {dragObject=null;preview=null;moved=false;InvalidateVisual();base.OnPointerCaptureLost(e);}
+ protected override void OnPointerExited(PointerEventArgs e) {base.OnPointerExited(e);if(hoveredOriginal is not null){hoveredOriginal=null;InvalidateVisual();}}
 }

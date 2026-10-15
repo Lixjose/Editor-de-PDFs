@@ -58,18 +58,77 @@
      <Grid Width="{Binding DisplayWidth}" Height="{Binding DisplayHeight}" IsVisible="{Binding !IsEmpty}" VerticalAlignment="Top" HorizontalAlignment="Center">
       <controls:PageCanvas x:Name="PdfCanvas" Workspace="{Binding}" Width="{Binding DisplayWidth}" Height="{Binding DisplayHeight}"/>
       <Canvas x:Name="InlineEditLayer" IsHitTestVisible="True">
+       <!-- Barra flotante de formato Acrobat -->
+       <Border x:Name="FloatingFormatBar"
+               IsVisible="False"
+               Background="#1E1E24"
+               BorderBrush="#2563EB"
+               BorderThickness="1"
+               CornerRadius="6"
+               BoxShadow="0 4 14 0 #66000000"
+               Padding="6,4">
+        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+         <ComboBox x:Name="FloatFontCombo"
+                   Width="140"
+                   Height="26"
+                   FontSize="11"
+                   SelectionChanged="FloatFontChanged"/>
+         <NumericUpDown x:Name="FloatSizeNumeric"
+                        Width="65"
+                        Height="26"
+                        FontSize="11"
+                        Minimum="6"
+                        Maximum="120"
+                        FormatString="0.#"
+                        ValueChanged="FloatSizeChanged"/>
+         <Button x:Name="FloatBoldButton"
+                 Content="B"
+                 FontWeight="Bold"
+                 Width="26"
+                 Height="26"
+                 FontSize="11"
+                 Click="FloatBoldClick"/>
+         <Button x:Name="FloatItalicButton"
+                 Content="I"
+                 FontStyle="Italic"
+                 Width="26"
+                 Height="26"
+                 FontSize="11"
+                 Click="FloatItalicClick"/>
+        </StackPanel>
+       </Border>
+
        <TextBox x:Name="DirectEditor"
                 IsVisible="False"
                 AcceptsReturn="True"
-                Background="#FAFFFFFF"
-                Foreground="#111827"
-                CaretBrush="#4F46E5"
-                BorderBrush="#4F46E5"
+                TextWrapping="Wrap"
+                Background="#FFFFFF"
+                Foreground="#000000"
+                CaretBrush="#2563EB"
+                SelectionBrush="#332563EB"
+                SelectionForegroundBrush="#000000"
+                BorderBrush="#2563EB"
                 BorderThickness="1.5"
                 CornerRadius="2"
-                Padding="3,1"
+                Padding="4,2"
                 KeyDown="DirectEditorKeyDown"
-                LostFocus="DirectEditorLostFocus"/>
+                LostFocus="DirectEditorLostFocus">
+        <TextBox.Styles>
+         <Style Selector="TextBox">
+          <Setter Property="Background" Value="#FFFFFF"/>
+          <Setter Property="Foreground" Value="#000000"/>
+         </Style>
+         <Style Selector="TextBox:focus /template/ Border#PART_BorderElement">
+          <Setter Property="Background" Value="#FFFFFF"/>
+          <Setter Property="BorderBrush" Value="#2563EB"/>
+          <Setter Property="BorderThickness" Value="1.5"/>
+         </Style>
+         <Style Selector="TextBox:pointerover /template/ Border#PART_BorderElement">
+          <Setter Property="Background" Value="#FFFFFF"/>
+          <Setter Property="BorderBrush" Value="#3B82F6"/>
+         </Style>
+        </TextBox.Styles>
+       </TextBox>
       </Canvas>
      </Grid>
      <StackPanel IsVisible="{Binding IsEmpty}" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="14"><TextBlock Text="Tu espacio de documentos" FontSize="24" FontWeight="SemiBold"/><TextBlock Text="Edición local · Tu documento permanece en tu equipo" Foreground="#918FA1"/><Button Content="Abrir PDF" Click="OpenClick" Classes="primary" HorizontalAlignment="Center"/></StackPanel>

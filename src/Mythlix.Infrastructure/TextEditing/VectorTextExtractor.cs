@@ -73,9 +73,54 @@ public static class VectorTextExtractor {
                 mergedLines.Add(current);
             }
 
-            var blocks = new List<OriginalTextBlock>();
+            // Group consecutive lines into paragraph blocks
+            var paragraphs = new List<(double Left, double Top, double Width, double Height, string Text, FontSpec Font, bool Bold, bool Italic, int LineCount)>();
+            var currentGroup = new List<(double Left, double Top, double Width, double Height, string Text, FontSpec Font, bool Bold, bool Italic)>();
+
+            void FlushCurrentGroup() {
+                if(currentGroup.Count == 0) return;
+                var first = currentGroup[0];
+                var last = currentGroup[^1];
+                var left = currentGroup.Min(l => l.Left);
+                var top = first.Top;
+                var right = currentGroup.Max(l => l.Left + l.Width);
+                var bottom = last.Top + last.Height;
+                var width = right - left;
+                var height = bottom - top;
+                var text = string.Join("\n", currentGroup.Select(l => l.Text));
+                paragraphs.Add((left, top, width, height, text, first.Font, first.Bold, first.Italic, currentGroup.Count));
+                currentGroup.Clear();
+            }
+
             for(var i = 0; i < mergedLines.Count; i++) {
-                var item = mergedLines[i];
+                var line = mergedLines[i];
+                if(currentGroup.Count == 0) {
+                    currentGroup.Add(line);
+                    continue;
+                }
+
+                var prev = currentGroup[^1];
+                var verticalGap = line.Top - (prev.Top + prev.Height);
+                var maxGap = Math.Max(12, line.Font.Size * 1.5);
+                var sameFont = line.Font.Family.Equals(prev.Font.Family, StringComparison.OrdinalIgnoreCase) &&
+                               Math.Abs(line.Font.Size - prev.Font.Size) <= 1.0 &&
+                               line.Bold == prev.Bold &&
+                               line.Italic == prev.Italic;
+                var isAligned = Math.Abs(line.Left - prev.Left) <= Math.Max(35, line.Font.Size * 3);
+                var isNextLine = verticalGap >= -3 && verticalGap <= maxGap;
+
+                if(sameFont && isAligned && isNextLine) {
+                    currentGroup.Add(line);
+                } else {
+                    FlushCurrentGroup();
+                    currentGroup.Add(line);
+                }
+            }
+            FlushCurrentGroup();
+
+            var blocks = new List<OriginalTextBlock>();
+            for(var i = 0; i < paragraphs.Count; i++) {
+                var item = paragraphs[i];
                 var fontSize = Math.Max(4, Math.Round(item.Font.Size, 1));
                 var bounds = new ObjectBounds(item.Left, item.Top, Math.Max(item.Width, 8), Math.Max(item.Height, 8));
                 var fingerprint = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes($"{page}_{i}_{item.Text}_{item.Left}_{item.Top}")));
@@ -92,7 +137,7 @@ public static class VectorTextExtractor {
                     Bold: item.Bold,
                     Italic: item.Italic,
                     Alignment: TextAlignment.Left,
-                    LineCount: 1
+                    LineCount: item.LineCount
                 ));
             }
 

@@ -15,6 +15,7 @@ public sealed partial class WorkspaceViewModel {
  public ObservableCollection<OriginalTextBlock> OriginalBlocks {get;}=new();
  public ObservableCollection<PageThumbnailViewModel> PageThumbnails {get;}=new();
  [ObservableProperty] private OriginalTextBlock? selectedOriginal;
+ [ObservableProperty] private OriginalTextBlock? activeEditingOriginal;
  [ObservableProperty] private string originalDraftText="";
  [ObservableProperty] private double originalDraftSize=14;
  [ObservableProperty] private string originalDraftColor="#000000";
@@ -51,6 +52,29 @@ public sealed partial class WorkspaceViewModel {
   var id=block.Id;
   await Task.Run(()=>{var before=doc.Document.Snapshot();editor.ReplaceText(CurrentPage,block,options);doc.Undo.Push(before);doc.Redo.Clear();LimitUndo(doc);});
   doc.Modified=true;doc.Revision++;await RenderAsync();SelectedOriginal=OriginalBlocks.FirstOrDefault(b=>b.Id==id);
+ });
+ public Task CommitOriginalTextDirectAsync(OriginalTextBlock block, string newText, string? fontFamily = null, double? fontSize = null, string? color = null, bool? bold = null, bool? italic = null) => RunAsync(async () => {
+  if(Selected is not {} doc || doc.Document is not IContentEditor editor) return;
+  var options = new TextEditOptions(
+   Text: newText,
+   FontSize: fontSize ?? block.FontSize,
+   Color: string.IsNullOrWhiteSpace(color) ? block.Color : color,
+   Bold: bold ?? block.Bold,
+   Italic: italic ?? block.Italic,
+   Alignment: block.Alignment,
+   FontFamily: string.IsNullOrWhiteSpace(fontFamily) || fontFamily == "Conservar fuente" ? block.FontName : fontFamily,
+   Strict: false
+  );
+  await Task.Run(() => {
+   var before = doc.Document.Snapshot();
+   editor.ReplaceText(CurrentPage, block, options);
+   doc.Undo.Push(before);
+   doc.Redo.Clear();
+   LimitUndo(doc);
+  });
+  doc.Modified = true;
+  doc.Revision++;
+  await RenderAsync();
  });
  public Task ReplaceOriginalAsync(string text,double size)=>ReplaceOriginalWithOptionsAsync(new TextEditOptions(text,size,Strict:false));
  [RelayCommand] private Task ApplyOriginalAsync()=>ReplaceOriginalWithOptionsAsync(new TextEditOptions(
