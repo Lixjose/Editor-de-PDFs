@@ -27,7 +27,8 @@ Linux: instale `poppler-utils` con el gestor de su distribución. Windows: obten
 7. Seleccione un bloque en **Texto original**, cambie su texto y aplique. Funciona con bloques simples y fuentes estándar compatibles; los casos no seguros se mantienen en solo lectura.
 8. Para escaneos, use **OCR → Reconocimiento local**, revise palabras y cree una capa buscable o exporte una reconstrucción editable.
 9. Use **Convertir → Exportar páginas como PNG…** para exportar intervalos con tamaño configurable a una carpeta nueva.
-10. Guarde una copia con otro nombre. El PDF original se conserva. La aplicación pregunta antes de descartar cambios.
+10. Use **Convertir → Crear PDF desde imágenes…** para crear un PDF de PNG/JPEG/BMP, con papel A4/Carta, margen y orientación automática.
+11. Guarde una copia con otro nombre. El PDF original se conserva. La aplicación pregunta antes de descartar cambios.
 
 Los PDF firmados se rechazan en esta fase para evitar invalidar firmas sin un sistema de validación. PDF cifrados que requieran contraseña no tienen diálogo de autenticación aún.
 
@@ -43,7 +44,7 @@ En PowerShell: `./scripts/publish.ps1 -Runtime win-x64`. Los scripts publican ca
 
 La fase 6 inicial añade caché LRU de renderizado/texto y reutilización del PDF temporal por revisión.
 
-Consulte [arquitectura y viabilidad](docs/ARCHITECTURE.md), [estado de funciones](docs/STATUS.md), [edición gráfica](docs/PHASE2.md), [texto original e interfaz](docs/PHASE3.md), [OCR e instalación](docs/PHASE4.md) y [optimización](docs/PHASE6.md), [exportación PNG](docs/IMAGE_EXPORT.md) y [validación](docs/VALIDATION.md). Los archivos de referencia se conservan en `references/`.
+Consulte [arquitectura y viabilidad](docs/ARCHITECTURE.md), [estado de funciones](docs/STATUS.md), [edición gráfica](docs/PHASE2.md), [texto original e interfaz](docs/PHASE3.md), [OCR e instalación](docs/PHASE4.md) y [optimización](docs/PHASE6.md), [exportación PNG](docs/IMAGE_EXPORT.md), [imágenes a PDF](docs/IMAGES_TO_PDF.md) y [validación](docs/VALIDATION.md). Los archivos de referencia se conservan en `references/`.
 
 También puede abrir un PDF al iniciar: `dotnet run --project src/Mythlix.Desktop -- ruta/documento.pdf`. La comprobación automatizada de ventana se invoca con `--smoke-test ruta/documento.pdf` y cierra la aplicación tras renderizar.
 

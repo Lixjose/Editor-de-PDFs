@@ -22,7 +22,7 @@
     <MenuItem Header="Editar"><MenuItem Header="Seleccionar texto original" Click="OriginalModeClick"/><MenuItem Header="Deshacer" Click="UndoClick"/><MenuItem Header="Rehacer" Click="RedoClick"/></MenuItem>
     <MenuItem Header="Insertar"><MenuItem Header="Texto nuevo" Command="{Binding AddTextCommand}"/><MenuItem Header="Imagen…" Click="InsertImageClick"/><MenuItem Header="Rectángulo" Command="{Binding AddRectangleCommand}"/><MenuItem Header="Elipse" Command="{Binding AddEllipseCommand}"/><MenuItem Header="Línea" Command="{Binding AddLineCommand}"/></MenuItem>
     <MenuItem Header="Organizar"><MenuItem Header="Duplicar página" Click="DuplicatePageClick"/><MenuItem Header="Mover página hacia atrás" Click="MoveBeforeClick"/><MenuItem Header="Mover página hacia delante" Click="MoveAfterClick"/><MenuItem Header="Insertar PDF después de la página actual…" Click="InsertPdfClick"/><MenuItem Header="Extraer páginas a otro PDF…" Click="ExtractPagesClick"/><MenuItem Header="Dividir PDF en partes…" Click="SplitPdfClick"/><MenuItem Header="Rotar página" Click="RotateClick"/><MenuItem Header="Añadir página en blanco" Click="AddClick"/><MenuItem Header="Eliminar página…" Click="DeleteClick"/></MenuItem>
-    <MenuItem Header="Convertir"><MenuItem Header="Exportar páginas como PNG…" Click="ExportImagesClick"/></MenuItem>
+    <MenuItem Header="Convertir"><MenuItem Header="Crear PDF desde imágenes…" Click="ImagesToPdfClick"/><MenuItem Header="Exportar páginas como PNG…" Click="ExportImagesClick"/></MenuItem>
     <MenuItem Header="OCR"><MenuItem Header="Reconocimiento local…" Click="OcrClick"/></MenuItem>
    </Menu>
    <TextBlock Grid.Column="2" Text="LOCAL · PDF STUDIO" Classes="caption" VerticalAlignment="Center" Margin="12,0"/>

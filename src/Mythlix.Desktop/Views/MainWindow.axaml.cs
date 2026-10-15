@@ -17,6 +17,13 @@ public partial class MainWindow : Window {
    var path=args.FirstOrDefault(a=>a.EndsWith(".pdf",StringComparison.OrdinalIgnoreCase));
    if(path is null) return;
    await Execute(async()=>{await vm.OpenAsync(path);await vm.RenderAsync();});
+   if(args.Contains("--images-to-pdf-smoke")) {
+    await vm.RunAsync(async()=> {
+     try{await Diagnostics.ImagesToPdfSmokeTest.RunAsync(vm);Console.WriteLine("MYTHLIX_IMAGES_TO_PDF_SMOKE_OK");}
+     catch(Exception ex){Console.WriteLine("MYTHLIX_IMAGES_TO_PDF_SMOKE_FAILED: "+ex);Environment.ExitCode=1;}
+    });
+    closing=true;vm.Dispose();Close();return;
+   }
    if(args.Contains("--images-smoke")) {
     try{await Diagnostics.ImageExportSmokeTest.RunAsync(vm);Console.WriteLine("MYTHLIX_IMAGES_SMOKE_OK");}
     catch(Exception ex){Console.WriteLine("MYTHLIX_IMAGES_SMOKE_FAILED: "+ex);Environment.ExitCode=1;}
@@ -148,6 +155,36 @@ public partial class MainWindow : Window {
    vm.Status=$"División completada: {results.Count} PDF en {destination}";
   } catch(OperationCanceledException) {vm.Status="División cancelada; no se publicaron partes.";}
   finally {progress.Close();}
+ });
+ async void ImagesToPdfClick(object? s,RoutedEventArgs e)=>await Execute(async()=> {
+  var files=await StorageProvider.OpenFilePickerAsync(new(){Title="Seleccionar imágenes (orden del selector)",AllowMultiple=true,
+   FileTypeFilter=[new FilePickerFileType("PNG, JPEG o BMP"){Patterns=["*.png","*.jpg","*.jpeg","*.bmp"]}]});
+  if(files.Count==0)return;
+  var paths=files.Select(f=>f.TryGetLocalPath()??throw new InvalidOperationException("Seleccione archivos locales.")).ToArray();
+  if(paths.Length>100)throw new InvalidOperationException("Seleccione un máximo de 100 imágenes.");
+  var dialog=new Window{Title="Crear PDF desde imágenes",Width=510,Height=365,WindowStartupLocation=WindowStartupLocation.CenterOwner};
+  var paper=new ComboBox{ItemsSource=new[]{"A4","Carta"},SelectedIndex=0};
+  var margin=new NumericUpDown{Minimum=0,Maximum=100,Value=24,FormatString="0"};
+  var order=new TextBox{Text=string.Join("\n",paths.Select((p,i)=>$"{i+1}. {Path.GetFileName(p)}")),IsReadOnly=true,Height=90,AcceptsReturn=true};
+  var accept=new Button{Content="Guardar PDF nuevo"};var cancel=new Button{Content="Cancelar"};
+  accept.Click+=(_,_)=>dialog.Close(true);cancel.Click+=(_,_)=>dialog.Close(false);
+  dialog.Content=new StackPanel{Margin=new Thickness(20),Spacing=10,Children={new TextBlock{Text="Una imagen por página, en este orden:"},order,paper,new TextBlock{Text="Margen en puntos (orientación automática):"},margin,new StackPanel{Orientation=Avalonia.Layout.Orientation.Horizontal,Spacing=10,Children={accept,cancel}}}};
+  if(!await dialog.ShowDialog<bool>(this))return;
+  var file=await StorageProvider.SaveFilePickerAsync(new(){Title="Guardar con un nombre nuevo",SuggestedFileName="imagenes.pdf",DefaultExtension="pdf",FileTypeChoices=[FilePickerFileTypes.Pdf]});
+  var destination=file?.TryGetLocalPath();if(destination is null)return;
+  using var cancellation=new CancellationTokenSource();
+  var progress=new Window{Title="Creando PDF",Width=400,Height=160,WindowStartupLocation=WindowStartupLocation.CenterOwner,CanResize=false};
+  var label=new TextBlock{Text=$"Procesando 0 de {paths.Length} imágenes…"};var bar=new ProgressBar{Maximum=paths.Length};
+  var stop=new Button{Content="Cancelar"};stop.Click+=(_,_)=>{cancellation.Cancel();stop.IsEnabled=false;};
+  progress.Closing+=(_,_)=>cancellation.Cancel();progress.Content=new StackPanel{Margin=new Thickness(20),Spacing=12,Children={label,bar,stop}};progress.Show(this);
+  var updates=new Progress<int>(n=>{bar.Value=n;label.Text=$"Procesando {n} de {paths.Length} imágenes…";});
+  var selectedPaper=paper.SelectedIndex==0?Mythlix.Infrastructure.ImagePdfPaper.A4:Mythlix.Infrastructure.ImagePdfPaper.Letter;
+  var selectedMargin=(double)(margin.Value??24);
+  try {
+   await Task.Run(()=>new Mythlix.Infrastructure.ImagesToPdfConverter().ConvertAsync(paths,destination,selectedPaper,selectedMargin,cancellation.Token,updates));
+  } catch(OperationCanceledException) {vm.Status="Conversión cancelada; no se creó el PDF.";return;}
+  finally {progress.Close();}
+  await vm.OpenAsync(destination);await vm.RenderAsync();vm.Status=$"PDF creado con {paths.Length} páginas: {destination}";
  });
  async void ExportImagesClick(object? s,RoutedEventArgs e)=>await Execute(async()=> {
   if(vm.Selected is not {} doc)return;

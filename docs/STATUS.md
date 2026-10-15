@@ -34,6 +34,8 @@
 
 - Conversión inicial: páginas a PNG por intervalos y orden solicitado, lado mayor configurable (128–2400 px), progreso, cancelación y exportación del estado editado actual a una carpeta nueva.
 
+- Conversión: crear PDF desde PNG/JPEG/BMP, una imagen por página en orden del selector, A4/Carta, margen, orientación automática, progreso y cancelación; apertura del resultado en pestaña nueva.
+
 ## Parcial
 
 - Visor: miniaturas bajo demanda para páginas cercanas; sin marcadores, arrastrar/soltar archivos, atajos, ajuste al ancho ni vista doble. Selección de bloques editables en lienzo; copiar texto desde el inspector.
@@ -52,7 +54,7 @@
 - OCR avanzado: orientación, deskew, regiones, preprocesamiento explícito, cola de varios archivos y recuperación persistente.
 - Formularios, cifrado, firmas criptográficas, redacción segura.
 - Organización avanzada: arrastrar y soltar, selección múltiple visual, combinación por lotes. La inserción y extracción actuales no importan marcadores ni formularios de nivel documento.
-- Conversión a DOCX/HTML/PDF-A, imágenes a PDF y formatos de imagen adicionales a PNG.
+- Conversión a DOCX/HTML/PDF-A, exportación de imágenes adicional a PNG e importación WebP/TIFF/SVG.
 - Serilog, persistencia SQLite, extensiones, recuperación y autoguardado.
 - Instaladores MSI/DEB/RPM/AppImage y pruebas visuales automatizadas.
 

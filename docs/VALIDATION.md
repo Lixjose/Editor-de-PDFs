@@ -118,3 +118,12 @@ La comprobación gráfica invoca comandos MVVM y captura la ventana; no automati
 - VSTest y comprobación gráfica ejecutados fuera del aislamiento para sockets y acceso a la ventana.
 - `git diff --check`: correcto.
 - Sin automatización de clics del diálogo/explorador ni validación Windows. Formatos, límites y comportamiento ante cierre abrupto descritos en IMAGE_EXPORT.md.
+
+## Conversión — Imágenes a PDF
+
+- Compilación final: **0 advertencias, 0 errores**.
+- Regresión xUnit: **106 aprobadas**, 0 fallidas. Diez casos nuevos verifican papel A4/Carta, orden y orientación, colores de imágenes renderizadas con Poppler, margen blanco, conservación de archivos fuente, márgenes inválidos, lotes vacíos/excesivos, imagen corrupta, cancelación tras la primera página, destino existente y archivo excesivo/formato no admitido.
+- Ventana Avalonia: **MYTHLIX_IMAGES_TO_PDF_SMOKE_OK**, código 0. Crea un PDF de dos imágenes, lo abre y renderiza en una pestaña nueva, comprueba el estado no modificado y conserva la pestaña original al cerrar el resultado.
+- La primera ejecución del diagnóstico provocó renderizado duplicado por el evento de pestaña: el diagnóstico ahora usa RunAsync, como el flujo real de conversión, para impedir operaciones simultáneas.
+- VSTest y la ventana se ejecutaron fuera del aislamiento por sus requisitos de sockets/acceso gráfico. `git diff --check`: correcto.
+- No se automatizaron clics del selector/opciones ni se verificó Windows. Dimensiones máximas se validan después de cargar la imagen; no se afirma aislamiento del decodificador ni límite agregado de memoria. Alcance en IMAGES_TO_PDF.md.
