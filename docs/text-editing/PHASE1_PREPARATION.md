@@ -1,6 +1,6 @@
 # Preparación de fase 1: fragmentos de estilo con procedencia
 
-Estado: preparación; el nuevo modelo no está activado en el motor ni en la interfaz.
+Estado: paso 1A implementado (contratos base inmutables); el nuevo modelo no está activado en el motor ni en la interfaz.
 Esta fase es distinta de la entrega histórica descrita en `../TEXT_ENGINE_PHASE1.md`.
 
 ## Objetivo y alcance
@@ -34,7 +34,7 @@ Fuera del primer alcance: CID/Type0, fuentes incrustadas/subconjuntos, Unicode c
 | `RunEditResult` | Nuevo borrador y diagnósticos estructurados; sin mutación parcial al fallar. |
 | `IFontEncodingResolver` | Validar caracteres y resolver bytes para la fuente real; no deducir codificación de su nombre. |
 
-Los nombres son contratos de diseño, todavía no API pública implementada. No añadir esqueletos que devuelvan éxito o métricas ficticias.
+Los contratos base `TextSourceSpan`, `PdfRunStyle` y `PdfTextRun` están implementados en `Mythlix.Core.TextEditing`. `TextMapping`, el buffer y el resolvedor se implementarán al disponer de extracción y operaciones reales; no hay esqueletos que devuelvan éxito o métricas ficticias.
 
 ## Reglas de edición
 
@@ -89,3 +89,14 @@ DOTNET_CLI_HOME=/tmp/mythlix-cli .sdk/dotnet test Mythlix.sln -m:1 --no-restore
 - El detector de fondo rechazó los bloques del PDF técnico durante el diagnóstico anterior; la comprobación de transición aisló la confirmación. Mantener esta incidencia visible y crear una reproducción independiente antes de afirmar validación completa de apertura de edición.
 - La ruta de máscara puede conservar texto subyacente en búsqueda/copia; no es borrado seguro ni se usará para afirmar edición nativa.
 - La documentación histórica contiene estados antiguos. Este documento describe solo la nueva preparación de estilos mixtos y no sustituye los resultados verificados de las otras funciones.
+
+
+## Resultado del paso 1A
+
+Se añadieron `TextRange`, `TextDocumentContext`, `TextSourceSpan`, `PdfFontReference`, `RunRgbColor`, `PdfRunStyle`, `RunSourceSlice`, `RunInsertionAnchor` y `PdfTextRun` en Core, sin dependencias externas nuevas.
+
+Los constructores validan rangos sin overflow, identidad y revisión, estados numéricos finitos, colores RGB y escala positiva. La igualdad de estilos compara valores y ámbito de fuente. Los fragmentos toman una copia inmutable de las procedencias recibidas; los originales deben estar cubiertos por rangos ordenados, sin huecos ni solapamiento. Los insertados necesitan un ancla explícita. No se permiten rangos que corten pares sustitutos UTF-16.
+
+El modelo puede almacenar texto de borrador todavía no codificable, sin afirmar que tenga glifos o bytes PDF disponibles. La validación completa de grafemas, codificación y mapeo queda para los pasos 1B/1C. No se agregaron métricas ni codificaciones simuladas. El primer color de dominio es RGB; el adaptador deberá convertir Gray de forma explícita y no declarar soporte de espacios de color arbitrarios.
+
+`TextRunContractTests` verifica preservación de múltiples procedencias, aislamiento de colecciones, identidad de fuente por ámbito, revisiones `long`, anclas, rangos inválidos y fronteras UTF-16. El siguiente paso es 1B: extracción nativa de múltiples operadores y cambios de estilo como ruta adicional de solo lectura.
