@@ -41,7 +41,8 @@ public sealed record TextEditOptions(
     bool Strict = false,
     double? X = null,
     double? Baseline = null,
-    double? LineHeight = null
+    double? LineHeight = null,
+    string BackgroundColor = "#FFFFFF"
 );
 
 /// <summary>Moves an original text line so that its left edge and baseline land on the given coordinates.</summary>

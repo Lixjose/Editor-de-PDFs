@@ -145,8 +145,8 @@ public sealed class PdfDocumentSession : IPdfDocument, IContentEditor, ISearchab
    Y = maskY,
    Width = Math.Min(geometry.Width - maskX, block.Bounds.Width + pad * 2),
    Height = Math.Min(geometry.Height - maskY, block.Bounds.Height + pad * 2),
-   Color = "#FFFFFF",
-   FillColor = "#FFFFFF",
+   Color = options.BackgroundColor,
+   FillColor = options.BackgroundColor,
    StrokeWidth = 0
   };
   currentGraphics.Add(mask);

@@ -1,5 +1,7 @@
 # Fase 1 — Motor de Edición de Texto con Reflujo y Formato Enriquecido
 
+> Documento de la entrega histórica de reflujo. Para la nueva fase de fragmentos con estilos mixtos, consulte [la preparación y sus criterios de aceptación](text-editing/PHASE1_PREPARATION.md).
+
 ## Resumen de Capacidades Implementadas
 
 Esta entrega implementa el motor de texto solicitado en el Punto 1, superando las limitaciones de reemplazo rígido de cadena única previa e incorporando:

@@ -1,0 +1,91 @@
+# Preparación de fase 1: fragmentos de estilo con procedencia
+
+Estado: preparación; el nuevo modelo no está activado en el motor ni en la interfaz.
+Esta fase es distinta de la entrega histórica descrita en `../TEXT_ENGINE_PHASE1.md`.
+
+## Objetivo y alcance
+
+Representar y editar un borrador de párrafo con varios estilos sin aplanar fuentes, tamaños, colores o espaciados y sin perder la relación con el contenido original. La primera entrega se limita a escritura horizontal, fuentes estándar Type 1, WinAnsi compatible, matrices de traslación conocidas y texto de relleno RGB/Gray compatible. La edición de un subconjunto adicional se habilitará únicamente al disponer de pruebas de su extracción y escritura.
+
+Los documentos incompatibles conservan sus flujos actuales. No se transforma silenciosamente una edición nativa en máscara, OCR o sustitución de fuente. La ruta XML/TSV se identifica como extracción de respaldo; no proporciona por sí sola rangos editables del stream.
+
+Fuera del primer alcance: CID/Type0, fuentes incrustadas/subconjuntos, Unicode complejo y shaping, trazados de letras, texto vertical, transformaciones arbitrarias, recortes de texto, reflujo vectorial, árbol lógico, fondos complejos y eliminación segura por máscaras. El texto que requiera esas capacidades debe producir un diagnóstico explícito en el nuevo flujo.
+
+## Decisiones de arquitectura
+
+1. Conservar `OriginalTextBlock`, `PdfParagraph`, `IContentEditor`, `OriginalTextEditor`, `ParagraphReflow` y la capa gráfica. Introducir contratos adicionales en Core y adaptadores en Infrastructure, sin cambiar firmas existentes en la preparación.
+2. Core no incorpora Avalonia ni PDFsharp. Geometría en puntos de página, origen superior izquierdo; línea base explícita. Revisión `long`. Escala horizontal como factor (1 = 100 %), convertido a porcentaje solo al emitir Tz. Avances de diseño normalizados en em y avances efectivos en puntos, nunca una unidad ambigua.
+3. La identidad de fuente incluye documento/revisión, ámbito de recursos y recurso PDF; el nombre de familia no identifica una fuente física. Conservar Tc, Tw original, Tz, Ts, color y modo admitido. No mezclar estado tipográfico original con decisiones de sustitución.
+4. La procedencia conserva documento, página, revisión, stream, rango de bytes, ID y huella del bloque, huella del stream y rango de texto fuente. Un fragmento puede tener varias procedencias; fusionar estilos nunca descarta fuentes secundarias.
+5. Texto editado y procedencia original son estructuras distintas. Los caracteres insertados tienen identidad de borrador y un ancla, no offsets ficticios en el PDF. Los offsets fuente no se desplazan al editar el borrador; los del texto actual sí.
+6. Separar rangos de texto, secuencias de glifos y bytes/códigos PDF. Un cluster puede contener varios glifos y códigos. La primera fase admite solo el subconjunto que pueda mapear de forma comprobada; no afirma soporte general N:M.
+7. Colecciones inmutables. Los bytes originales no se exponen como arrays mutables. La sesión de borrador no escribe el documento y cancelar no modifica ni historial ni revisión.
+8. El compositor y escritor compartidos son una fase posterior: un TextBox no debe decidir la geometría PDF definitiva. Esta preparación no agrega controles nuevos ni reemplaza los gestos actuales.
+
+## Contratos a implementar
+
+| Contrato | Responsabilidad |
+|---|---|
+| `TextSourceSpan` | Identidad y rango exacto original con revisión y huellas; ámbito de recurso para fuentes. |
+| `PdfRunStyle` | Estado original admitido y referencia de fuente; igualdad por valores semánticos. |
+| `PdfTextRun` | Texto actual, estilo, ID de borrador y lista de procedencias/anclas. |
+| `TextMapping` | Relación entre rangos UTF-16, clusters, glifos y bytes originales; capacidades explícitas. |
+| `ParagraphRunBuffer` | Insertar, pegar, borrar y dividir como operaciones sobre borrador inmutable. |
+| `RunEditResult` | Nuevo borrador y diagnósticos estructurados; sin mutación parcial al fallar. |
+| `IFontEncodingResolver` | Validar caracteres y resolver bytes para la fuente real; no deducir codificación de su nombre. |
+
+Los nombres son contratos de diseño, todavía no API pública implementada. No añadir esqueletos que devuelvan éxito o métricas ficticias.
+
+## Reglas de edición
+
+- Inserción: hereda el estilo izquierdo en una frontera; al inicio hereda el primer estilo. Un párrafo vacío mantiene un estilo de escritura explícito.
+- Pegado inicial: solo texto plano con el estilo del punto de inserción. Mantener saltos duros separados de cortes suaves de composición; no aplicar Trim ni colapsar espacios de manera implícita.
+- Borrado: respeta fronteras de grafemas/clusters; conserva las procedencias de ambos extremos y permite fusionar estilos iguales sin perder su origen.
+- División: conserva el vínculo a los rangos fuente y ajusta los rangos del borrador. Un salto de párrafo no se confunde con reflujo.
+- Caracteres no codificables: diagnóstico bloqueante para confirmar; el borrador puede conservarlos para corrección. No reemplazar por '?' ni elegir otra fuente en silencio.
+- Ninguna operación de borrador modifica el PDF, su revisión, la selección original ni Undo/Redo.
+
+## Secuencia de implementación
+
+| Paso | Entrega revisable | Condición de salida |
+|---|---|---|
+| 1A | Contratos inmutables y validación de rangos/unidades | Core sigue sin dependencias gráficas/PDF; rangos inválidos rechazados. |
+| 1B | Extracción nativa de varios Tj/TJ y cambios de estilo | Bytes/rangos y estado correctos; fuentes y streams compartidos aislados; incógnitas explícitas. |
+| 1C | Buffer de mutaciones y validación WinAnsi | Pruebas de inserción, pegado, borrado, división, estilos y procedencias completas. |
+| 1D | Adaptador de solo lectura y diagnóstico por bloque | El flujo anterior continúa funcionando; el nuevo análisis no habilita escritura incompleta. |
+
+Composición compartida, commit del nuevo modelo y activación de UI requieren entregas posteriores y validación visual propia. No habilitar un botón de edición mixta antes de completar la cadena de extracción, edición, composición y escritura.
+
+## Matriz de aceptación
+
+| Caso | Resultado exigido |
+|---|---|
+| Normal + negrita + cursiva en un mismo BT/ET | Tres estilos y procedencias reales, sin convertir todo a un estilo. |
+| Cambios de tamaño/color y Tc/Tw/Tz/Ts | Estado conservado por fragmento; tipografía no estimada como si fuera exacta. |
+| Fuentes/streams compartidos | Editar una página no afecta otra. |
+| Inserción en frontera y párrafo vacío | Estilo heredado determinista y documentado. |
+| Borrado entre tres estilos | Sin texto perdido ni procedencias descartadas. |
+| ñ, acentos y caracteres no WinAnsi | Bytes correctos o diagnóstico bloqueante, nunca pérdida silenciosa. |
+| Emoji, combinación diacrítica, ligadura | No partir unidades inválidas; capacidad no soportada informada. |
+| Espacios repetidos y saltos duros | Conservación en borrador y distinción de cortes suaves. |
+| Selección de revisión antigua | Confirmación futura rechazada antes de escribir. |
+| Cancelar/Undo/Redo | Documento e historial coherentes; bloques originales conservados. |
+| Fondo azul/texto blanco, columnas/listas | Sin máscara blanca, fusión de columnas ni desplazamientos involuntarios. |
+| Latencia de edición | Conservar la superposición hasta recibir el render nuevo; medir sobre el mismo PDF y equipo. |
+
+## Pruebas de base disponibles
+
+`MixedStylePreparationTests` construye PDFs mínimos con estilos mixtos en un mismo objeto de texto, sobre blanco o azul. Comprueba que el roundtrip conserve texto y píxeles, que el analizador nativo no declare editable ese objeto todavía y que editar/deshacer una línea compatible no altere el contenido mixto.
+
+Estas pruebas protegen el comportamiento actual; no prueban que la edición mixta esté implementada. La matriz anterior detalla pruebas futuras y se completará con cada entrega.
+
+```bash
+DOTNET_CLI_HOME=/tmp/mythlix-cli .sdk/dotnet build Mythlix.sln -m:1 --no-restore
+DOTNET_CLI_HOME=/tmp/mythlix-cli .sdk/dotnet test Mythlix.sln -m:1 --no-restore
+```
+
+## Riesgos que deben resolverse antes de integrar
+
+- El detector de fondo rechazó los bloques del PDF técnico durante el diagnóstico anterior; la comprobación de transición aisló la confirmación. Mantener esta incidencia visible y crear una reproducción independiente antes de afirmar validación completa de apertura de edición.
+- La ruta de máscara puede conservar texto subyacente en búsqueda/copia; no es borrado seguro ni se usará para afirmar edición nativa.
+- La documentación histórica contiene estados antiguos. Este documento describe solo la nueva preparación de estilos mixtos y no sustituye los resultados verificados de las otras funciones.

@@ -129,9 +129,23 @@ public sealed partial class WorkspaceViewModel {
   NotifySelectionProperties();
  }
 
+ string OriginalBackgroundColor(OriginalTextBlock block) {
+  if(!block.Id.StartsWith("v:")) return "#FFFFFF";
+  if(PageImage is not {} bitmap) throw new InvalidOperationException("Vuelva a renderizar la página antes de editar el texto.");
+  var box = Geometry.ToDisplay(block.Bounds);
+  var brush = Controls.EditingBackground.Sample(bitmap,
+   new Avalonia.Rect(box.X, box.Y, box.Width, box.Height),
+   new Avalonia.Size(Geometry.DisplayWidth, Geometry.DisplayHeight),
+   Avalonia.Media.Color.TryParse(block.Color, out var color) ? color : Avalonia.Media.Colors.Black);
+  if(brush is not Avalonia.Media.SolidColorBrush solid)
+   throw new InvalidOperationException("El fondo del texto no es uniforme; no se puede cubrir sin alterar el diseño.");
+  return $"#{solid.Color.R:X2}{solid.Color.G:X2}{solid.Color.B:X2}";
+ }
+
  async Task ReplaceOriginalWithOptionsInternalAsync(TextEditOptions options) {
   if(SelectedOriginal is not {} block || Selected is not {} doc || doc.Document is not IContentEditor editor) return;
   var id = block.Id;
+  options = options with { BackgroundColor = OriginalBackgroundColor(block) };
   await Task.Run(() => {
    var before = doc.Document.Snapshot();
    editor.ReplaceText(CurrentPage, block, options);
@@ -192,7 +206,8 @@ public sealed partial class WorkspaceViewModel {
    Strict: false,
    X: x ?? block.Bounds.X,
    Baseline: baseline ?? block.EffectiveBaseline,
-   MaxWidth: block.LayoutWidth ?? block.Bounds.Width
+   MaxWidth: block.LayoutWidth ?? block.Bounds.Width,
+   BackgroundColor: OriginalBackgroundColor(block)
   );
   await Task.Run(() => {
    var before = doc.Document.Snapshot();
@@ -222,6 +237,7 @@ public sealed partial class WorkspaceViewModel {
 
   if(IsMultiOriginalSelected) {
    var selectedIds = SelectedOriginals.Select(b => b.Id).ToHashSet();
+   var backgrounds = SelectedOriginals.ToDictionary(b => b.Id, OriginalBackgroundColor);
    await Task.Run(() => {
     var before = doc.Document.Snapshot();
     foreach(var block in SelectedOriginals) {
@@ -233,6 +249,7 @@ public sealed partial class WorkspaceViewModel {
       Italic: OriginalDraftItalic,
       Alignment: alignment,
       FontFamily: font ?? block.FontName,
+      BackgroundColor: backgrounds[block.Id],
       Strict: false
      );
      editor.ReplaceText(CurrentPage, block, opts);

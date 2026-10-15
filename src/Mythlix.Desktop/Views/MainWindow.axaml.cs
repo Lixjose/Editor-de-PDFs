@@ -31,6 +31,11 @@ public partial class MainWindow : Window {
    var path=args.FirstOrDefault(a=>a.EndsWith(".pdf",StringComparison.OrdinalIgnoreCase));
    if(path is null) return;
    await Execute(async()=>{await vm.OpenAsync(path);await vm.RenderAsync();});
+   if(args.Contains("--text-edit-latency-smoke")) {
+    try { await CheckTextEditLatencyAsync(); }
+    catch(Exception ex) {Console.WriteLine("MYTHLIX_TEXT_EDIT_SMOKE_FAILED: " + ex);Environment.ExitCode=1;}
+    closing=true;vm.Dispose();Close();return;
+   }
    if(args.Contains("--images-to-pdf-smoke")) {
     await vm.RunAsync(async()=> {
      try{await Diagnostics.ImagesToPdfSmokeTest.RunAsync(vm);Console.WriteLine("MYTHLIX_IMAGES_TO_PDF_SMOKE_OK");}
@@ -466,6 +471,7 @@ public partial class MainWindow : Window {
  }
 
  void DirectEditorKeyDown(object? sender, KeyEventArgs e) {
+  if(isCommitting) { e.Handled = true; return; }
   if(e.Key == Key.Enter && !e.KeyModifiers.HasFlag(KeyModifiers.Shift)) {
    e.Handled = true;
    _ = CommitDirectEditAsync();
@@ -492,51 +498,37 @@ public partial class MainWindow : Window {
  async Task CommitDirectEditCoreAsync() {
   if(isCommitting || isDirectCanceling || !DirectEditor.IsVisible) return;
   isCommitting = true;
+  DirectEditor.IsReadOnly = true;
+  var targetOrig = activeEditingOriginal;
+  var targetGraph = activeEditingGraphic;
+  var paragraph = activeEditingParagraph;
+  var previousImage = vm.PageImage;
+  var newText = DirectEditor.Text ?? "";
+  var changed = targetOrig is not null ? newText != targetOrig.Text : targetGraph is not null && newText != targetGraph.Text;
   try {
-   DirectEditor.IsVisible = false;
-   var paragraph=activeEditingParagraph;
-   activeEditingParagraph=null;
-   var targetOrig = activeEditingOriginal;
-   var targetGraph = activeEditingGraphic;
-   activeEditingOriginal = null;
-   activeEditingGraphic = null;
-   vm.ActiveEditingOriginal = null;
-
-   var newText = DirectEditor.Text ?? "";
-   if(targetOrig is not null) {
-    if(newText != targetOrig.Text) {
-     if(paragraph is not null) {
-      var revision=vm.Selected?.Revision;
-      await vm.CommitParagraphAsync(paragraph,newText);
-      if(vm.Selected?.Revision==revision) {
-       activeEditingOriginal=targetOrig;activeEditingParagraph=paragraph;
-       vm.ActiveEditingOriginal=targetOrig;DirectEditor.IsVisible=true;DirectEditor.Focus();
-      }
-     }
-     else {
-      var revision = vm.Selected?.Revision;
-      await vm.CommitOriginalTextDirectAsync(targetOrig, newText, targetOrig.FontName, targetOrig.FontSize, null, targetOrig.Bold, targetOrig.Italic, targetOrig.Bounds.X, targetOrig.EffectiveBaseline);
-      if(vm.Selected?.Revision == revision) {
-       activeEditingOriginal = targetOrig;
-       vm.ActiveEditingOriginal = targetOrig;
-       DirectEditor.IsVisible = true;
-       DirectEditor.Focus();
-      }
-     }
-    }
-   } else if(targetGraph is not null) {
-    if(newText != targetGraph.Text) {
-     var revision = vm.Selected?.Revision;
+   // Keep the edited text and its background over the old render until PageImage
+   // changes. The PropertyChanged handler removes them in the same UI turn.
+   if(changed) {
+    if(targetOrig is not null) {
+     if(paragraph is not null) await vm.CommitParagraphAsync(paragraph, newText);
+     else await vm.CommitOriginalTextDirectAsync(targetOrig, newText, targetOrig.FontName, targetOrig.FontSize, null, targetOrig.Bold, targetOrig.Italic, targetOrig.Bounds.X, targetOrig.EffectiveBaseline);
+    } else if(targetGraph is not null) {
      await vm.CommitGraphicTextDirectAsync(targetGraph, newText, targetGraph.FontSize, null, targetGraph.Bold, targetGraph.Italic);
-     if(vm.Selected?.Revision == revision) {
-      activeEditingGraphic = targetGraph;
-      DirectEditor.IsVisible = true;
-      DirectEditor.Focus();
-     }
     }
    }
   } finally {
+   DirectEditor.IsReadOnly = false;
    isCommitting = false;
+   if(changed && ReferenceEquals(vm.PageImage, previousImage) && DirectEditor.IsVisible) {
+    // A rejected edit keeps the draft available for correction.
+    DirectEditor.Focus();
+   } else {
+    DirectEditor.IsVisible = false;
+    vm.ActiveEditingOriginal = null;
+    activeEditingOriginal = null;
+    activeEditingGraphic = null;
+    activeEditingParagraph = null;
+   }
   }
  }
 }

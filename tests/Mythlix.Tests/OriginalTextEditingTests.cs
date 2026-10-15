@@ -197,5 +197,24 @@ public sealed class OriginalTextEditingTests:IDisposable {
   Assert.Contains("Second line remains", text);
   Assert.Contains("Third line remains", text);
  }
+ [Fact] public async Task WhiteTextReplacementPreservesBlueBackground() {
+  Create("0.12549 0.30588 0.46667 rg 40 640 300 100 re f " +
+   "BT /F1 18 Tf 1 1 1 rg 1 0 0 1 60 680 Tm (2026) Tj ET");
+  using var doc = new PdfDocumentSession(Source);
+  var block = new OriginalTextBlock("v:1:0", "2026", "Liberation Sans", 18,
+   new ObjectBounds(60,94,50,24), "fp", Color:"#FFFFFF", Baseline:112);
+  doc.ReplaceText(1,block,new TextEditOptions("2027",18,Color:"#FFFFFF",BackgroundColor:"#204E77"));
+  await doc.SaveCopyAsync(Output);
+  using var reopened = new PdfDocumentSession(Output);
+  var mask=Assert.Single(reopened.GetGraphics(1),g=>g.Kind==GraphicKind.Rectangle);
+  Assert.Equal("#204E77",mask.FillColor);
+  var label=Assert.Single(reopened.GetGraphics(1),g=>g.Kind==GraphicKind.Text);
+  Assert.Equal("#FFFFFF",label.Color);
+  using var image=SkiaSharp.SKBitmap.Decode(await new PopplerRenderer().RenderAsync(Output,1,792,CancellationToken.None));
+  var pixel=image.GetPixel(61,116);
+  Assert.InRange(pixel.Red,31,33);
+  Assert.InRange(pixel.Green,77,79);
+  Assert.InRange(pixel.Blue,118,120);
+ }
  public void Dispose()=>Directory.Delete(directory,true);
 }

@@ -53,3 +53,5 @@ Para comprobar la nueva interfaz y la edición original: `dotnet run --project s
 OCR requiere Tesseract con modelos español/inglés. Ya están disponibles localmente en esta máquina; consulte PHASE4.md para instalarlo en otra.
 
 Comprobación integrada de división y navegación: `dotnet run --project src/Mythlix.Desktop --no-build -- --split-smoke references/Mythlix-Documento-Tecnico.pdf`.
+
+La preparación de la nueva fase de estilos mixtos, su alcance y criterios de aceptación están en [Fase 1: fragmentos con procedencia](docs/text-editing/PHASE1_PREPARATION.md). Esta preparación conserva el motor y los flujos de edición actuales.

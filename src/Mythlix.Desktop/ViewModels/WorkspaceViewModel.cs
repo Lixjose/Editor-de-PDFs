@@ -58,12 +58,24 @@ public sealed partial class WorkspaceViewModel : ObservableObject, IDisposable {
   var state = await Task.Run(() => {
    return (Geometry:doc.Document.GetPageGeometry(CurrentPage), Objects:doc.Document.GetGraphics(CurrentPage), Text:doc.Document is IContentEditor editor?editor.AnalyzeText(CurrentPage):new TextAnalysis([],0,"Motor sin edición original."));
   });
-  var png = await renderer.RenderAsync(doc.WorkingPath, CurrentPage, 1600, CancellationToken.None);
-  var thumb = await renderer.RenderAsync(doc.WorkingPath, CurrentPage, 220, CancellationToken.None);
-  var text = await renderer.ExtractTextAsync(doc.WorkingPath, CurrentPage, CancellationToken.None);
+  var renderTime = System.Diagnostics.Stopwatch.StartNew();
+  var page = CurrentPage;
+  var revision = doc.Revision;
+  // Poppler reads the prepared copy independently. Show the page as soon as
+  // its image is ready, without waiting for extraction or sidebar thumbnails.
+  var imageTask = renderer.RenderAsync(doc.WorkingPath, page, 1600, CancellationToken.None);
+  var textTask = renderer.ExtractTextAsync(doc.WorkingPath, page, CancellationToken.None);
+  var xmlTask = ExtractXmlForRenderAsync(doc.WorkingPath, page);
+  try { await imageTask; }
+  catch { await Task.WhenAll(imageTask, textTask, xmlTask); throw; }
+  if(Selected != doc || CurrentPage != page || doc.Revision != revision) { await Task.WhenAll(textTask, xmlTask); return; }
+  var png = await imageTask;
+  var old = PageImage; PageImage = new Bitmap(new MemoryStream(png)); old?.Dispose();
+  var imageMilliseconds = renderTime.ElapsedMilliseconds;
+  var text = await textTask;
   if(!string.IsNullOrWhiteSpace(text)) {
    try {
-    var xml = await poppler.ExtractXmlAsync(doc.WorkingPath, CurrentPage, CancellationToken.None);
+    var xml = await xmlTask;
     var vectorAnalysis = Mythlix.Infrastructure.TextEditing.VectorTextExtractor.ExtractFromXml(xml, CurrentPage, state.Geometry);
     if(vectorAnalysis.Blocks.Count > 0) state = (state.Geometry, state.Objects, Mythlix.Infrastructure.TextEditing.VectorTextExtractor.Merge(state.Text, vectorAnalysis));
     else {
@@ -73,10 +85,19 @@ public sealed partial class WorkspaceViewModel : ObservableObject, IDisposable {
     }
    } catch {}
   }
-  var old = PageImage; PageImage = new Bitmap(new MemoryStream(png)); old?.Dispose();
+  if(Selected != doc || CurrentPage != page || doc.Revision != revision) return;
+  RefreshOriginal(state.Text); PageText = text; RefreshGraphics(state.Geometry,state.Objects); OnPropertyChanged(nameof(PageLabel));
+  var thumb = await renderer.RenderAsync(doc.WorkingPath, page, 260, CancellationToken.None);
   old = Thumbnail; Thumbnail = new Bitmap(new MemoryStream(thumb)); old?.Dispose();
   await RenderThumbnailsAsync(doc);
-  OnPropertyChanged(nameof(ActiveThumbnail)); RefreshOriginal(state.Text); PageText = text; RefreshGraphics(state.Geometry,state.Objects); OnPropertyChanged(nameof(PageLabel)); Status = doc.Modified ? "Cambios pendientes • Guarde una copia" : "Documento listo • procesamiento local";
+  OnPropertyChanged(nameof(ActiveThumbnail));
+  Status = doc.Modified ? "Cambios pendientes • Guarde una copia" : "Documento listo • procesamiento local";
+  if(Environment.GetEnvironmentVariable("MYTHLIX_TRACE_PERFORMANCE") == "1")
+   Console.WriteLine($"MYTHLIX_RENDER page={page} image_ms={imageMilliseconds} total_ms={renderTime.ElapsedMilliseconds}");
+ }
+ async Task<string> ExtractXmlForRenderAsync(string path, int page) {
+  try { return await poppler.ExtractXmlAsync(path, page, CancellationToken.None); }
+  catch { return ""; } // Optional analysis must not prevent displaying the page.
  }
  public async Task EditAsync(string action) {
   var doc = Selected; if(doc is null) return;
