@@ -91,6 +91,24 @@ public sealed partial class WorkspaceViewModel : ObservableObject, IDisposable {
   });
   doc.Modified=true;doc.Revision++;ClearOcr();RefreshPages();await RenderAsync();
  }
+ public async Task ApplyHeaderFooterAsync(HeaderFooterOptions options) {
+  var doc=Selected;if(doc is null || doc.Document is not IPageDecorator decorator)return;
+  await Task.Run(()=> {
+   var before=doc.Document.Snapshot();
+   decorator.ApplyHeaderFooter(options);
+   doc.Undo.Push(before);doc.Redo.Clear();LimitUndo(doc);
+  });
+  doc.Modified=true;doc.Revision++;await RenderAsync();Status="Numeración y encabezados aplicados.";
+ }
+ public async Task ApplyWatermarkAsync(WatermarkOptions options) {
+  var doc=Selected;if(doc is null || doc.Document is not IPageDecorator decorator)return;
+  await Task.Run(()=> {
+   var before=doc.Document.Snapshot();
+   decorator.ApplyWatermark(options);
+   doc.Undo.Push(before);doc.Redo.Clear();LimitUndo(doc);
+  });
+  doc.Modified=true;doc.Revision++;await RenderAsync();Status="Marca de agua aplicada.";
+ }
  static void LimitUndo(DocumentViewModel doc) {
   if(doc.Undo.Sum(x=>(long)x.Length)>64L*1024*1024) {var latest=doc.Undo.Pop(); doc.Undo.Clear();doc.Undo.Push(latest);}
  }

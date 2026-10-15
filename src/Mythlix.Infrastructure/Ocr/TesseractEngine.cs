@@ -43,7 +43,17 @@ public sealed class TesseractEngine : IOcrEngine {
   if(process.ExitCode!=0)throw new InvalidOperationException("Tesseract no pudo reconocer la página. Compruebe los idiomas instalados y la imagen.");
   if(result.Length>16*1024*1024)throw new InvalidOperationException("Resultado OCR superior a 16 MB.");return result;
  }
- public async Task<IReadOnlyList<string>> LanguagesAsync(CancellationToken token)=>(await Run(["--list-langs"],token)).Split('\n',StringSplitOptions.TrimEntries|StringSplitOptions.RemoveEmptyEntries).Where(s=>System.Text.RegularExpressions.Regex.IsMatch(s,"^[a-z]{3}$")).ToArray();
+ static IReadOnlyList<string>? _cachedLanguages;
+ public static void ClearLanguageCache() => _cachedLanguages = null;
+ public async Task<IReadOnlyList<string>> LanguagesAsync(CancellationToken token) {
+  if(_cachedLanguages is not null) return _cachedLanguages;
+  var langs = (await Run(["--list-langs"], token))
+   .Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+   .Where(s => System.Text.RegularExpressions.Regex.IsMatch(s, "^[a-z]{3}$"))
+   .ToArray();
+  _cachedLanguages = langs;
+  return langs;
+ }
  public Task<OcrPageResult> RecognizeAsync(byte[] image,string language,CancellationToken token)=>RecognizeAsync(image,language,new OcrOptions(),token);
  public async Task<OcrPageResult> RecognizeAsync(byte[] image,string language,OcrOptions options,CancellationToken token) {
   token.ThrowIfCancellationRequested();options.Validate();
@@ -79,6 +89,22 @@ public sealed class TesseractEngine : IOcrEngine {
    if(words.Count>=20000)throw new InvalidOperationException("Resultado OCR superior a 20 000 palabras por página.");
    words.Add(new(fields[11],confidence,N(6),N(7),N(8),N(9)){Block=int.Parse(fields[2],CultureInfo.InvariantCulture),Paragraph=int.Parse(fields[3],CultureInfo.InvariantCulture),Line=int.Parse(fields[4],CultureInfo.InvariantCulture)});
   }
-  var result=new OcrPageResult(width,height,words);result.Validate();return result;
+  var wordsWithBaseline = new List<OcrWord>();
+  var lineGroups = words.GroupBy(w => (w.Block, w.Paragraph, w.Line));
+  foreach(var group in lineGroups) {
+   var list = group.ToList();
+   var estimatedLineBaseline = list.Average(w => {
+    bool hasDescender = w.Text.Any(c => c is 'g' or 'j' or 'p' or 'q' or 'y' or ',' or ';');
+    return hasDescender ? (w.Y + w.Height * 0.82) : (w.Y + w.Height);
+   });
+   var avgHeight = list.Average(w => w.Height);
+   foreach(var w in list) {
+    wordsWithBaseline.Add(w with {
+     BaselineY = estimatedLineBaseline,
+     EstimatedFontSize = Math.Max(4, avgHeight * 0.9)
+    });
+   }
+  }
+  var result=new OcrPageResult(width,height,wordsWithBaseline);result.Validate();return result;
  }
 }

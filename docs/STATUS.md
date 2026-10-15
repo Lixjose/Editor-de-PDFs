@@ -20,6 +20,12 @@
 - Conservación de posición y fuente, reducción de tamaño segura, validación de ancho y selección obsoleta.
 - Interfaz renovada según los últimos adjuntos: menús funcionales, herramientas compactas, miniaturas cercanas reales, resaltado activo, inspector contextual y ajuste de página completa.
 - Fase 1 (Motor de texto): reflujo de párrafos con ajuste de líneas automático y saltos explícitos (\n), sustitución criteriosa de fuentes estándar y registro de recursos tipográficos (/Font), cambio de tamaño (4-144 pt), color (#RRGGBB con operador rg), negrita, cursiva y alineación (izquierda, centro, derecha) en texto original y cuadros nuevos.
+- Fase 2 (Gestión avanzada de páginas y OCR industrial):
+  - Combinación de documentos PDF (IPdfMerger / PdfMerger) atómica con soporte de progreso y cancelación.
+  - Numeración de páginas, encabezados y pies (IPageDecorator.ApplyHeaderFooter) con formato dinámico ({n}, {total}), 6 posiciones, omisión de primera página y Deshacer/Rehacer.
+  - Marcas de agua configurables (IPageDecorator.ApplyWatermark) con ángulo, tamaño, color, opacidad alfa y Deshacer/Rehacer.
+  - Reordenación rápida de miniaturas con controles directos subir/bajar.
+  - OCR industrial: cálculo de línea base tipográfica común (BaselineY) y tamaño estimado (EstimatedFontSize) agrupado por línea resolviendo el defecto de salto de caja de tinta; soporte completo de páginas rotadas (90°, 180°, 270°) y documentos mixtos en SearchableLayerWriter mediante transformación geométrica; caché de modelos/idiomas en TesseractEngine.
 
 - Fase 4: OCR local Tesseract español/inglés, páginas y documentos completos, progreso y cancelación.
 - Revisión y corrección de palabras con confianza y avisos inferiores al 70%, exportación de texto UTF-8 con saltos de línea.

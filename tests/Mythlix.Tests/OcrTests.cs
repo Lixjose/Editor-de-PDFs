@@ -40,7 +40,7 @@ public sealed class OcrTests:IDisposable {
   Assert.NotEmpty(doc.GetGraphics(1));Assert.All(doc.GetGraphics(1),o=>Assert.Equal(GraphicKind.Text,o.Kind));
   Assert.Contains("Documento",await new PopplerRenderer().ExtractTextAsync(Output,1,CancellationToken.None));
  }
- [Fact] public void RotatedPageCannotGetMisalignedOcrLayer(){using var doc=new PdfDocumentSession(Source);doc.Rotate(1);Assert.Throws<InvalidOperationException>(()=>doc.SetOcr(1,new(1200,1600,[new("test",99,80,120,100,60)])));}
+ [Fact] public void RotatedPageSupportsOcrLayerTransformation(){using var doc=new PdfDocumentSession(Source);doc.Rotate(1);var ex=Record.Exception(()=>doc.SetOcr(1,new(1200,1600,[new("test",99,80,120,100,60)])));Assert.Null(ex);}
  sealed class InlineProgress(Action<int> action):IProgress<int>{public void Report(int value)=>action(value);}
  [Fact] public async Task CancelledBatchRestoresAlreadyProcessedPages(){
   var two=Path.Combine(folder,"two.pdf");

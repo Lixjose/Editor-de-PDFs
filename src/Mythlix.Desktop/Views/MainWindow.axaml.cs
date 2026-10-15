@@ -119,6 +119,63 @@ public partial class MainWindow : Window {
   var path=files.FirstOrDefault()?.TryGetLocalPath(); if(path is null)return;
   await vm.InsertPagesAsync(path);
  });
+ async void MergePdfClick(object? s,RoutedEventArgs e)=>await Execute(async()=> {
+  var files=await StorageProvider.OpenFilePickerAsync(new(){Title="Seleccionar documentos PDF a combinar (mínimo 2)",AllowMultiple=true,FileTypeFilter=[FilePickerFileTypes.Pdf]});
+  if(files.Count<2){vm.Status="Seleccione al menos dos documentos PDF para combinar.";return;}
+  var paths=files.Select(f=>f.TryGetLocalPath()??throw new InvalidOperationException("Archivo local no válido.")).ToArray();
+  var saveFile=await StorageProvider.SaveFilePickerAsync(new(){Title="Guardar documento combinado",SuggestedFileName="documento-combinado.pdf",DefaultExtension="pdf",FileTypeChoices=[FilePickerFileTypes.Pdf]});
+  var destination=saveFile?.TryGetLocalPath();if(destination is null)return;
+  using var cancellation=new CancellationTokenSource();
+  var progressWindow=new Window{Title="Combinando documentos PDF",Width=400,Height=150,WindowStartupLocation=WindowStartupLocation.CenterOwner,CanResize=false};
+  var stop=new Button{Content="Cancelar"};stop.Click+=(_,_)=>{cancellation.Cancel();stop.IsEnabled=false;};
+  progressWindow.Closing+=(_,_)=>cancellation.Cancel();
+  progressWindow.Content=new StackPanel{Margin=new Thickness(20),Spacing=12,Children={new TextBlock{Text=$"Combinando {paths.Length} documentos…"},new ProgressBar{IsIndeterminate=true},stop}};
+  progressWindow.Show(this);
+  try {
+   await Task.Run(()=>new Mythlix.Infrastructure.PdfMerger().MergeAsync(destination,paths,cancellation.Token));
+   await vm.OpenAsync(destination);await vm.RenderAsync();vm.Status=$"Documentos combinados con éxito: {Path.GetFileName(destination)}";
+  } catch(OperationCanceledException){vm.Status="Combinación cancelada.";}
+  finally{progressWindow.Close();}
+ });
+ async void PageNumberingClick(object? s,RoutedEventArgs e)=>await Execute(async()=> {
+  if(vm.Selected is null)return;
+  var dialog=new Window{Title="Numeración de páginas",Width=450,Height=330,WindowStartupLocation=WindowStartupLocation.CenterOwner,CanResize=false};
+  var format=new TextBox{Text="Página {n} de {total}"};
+  var posCombo=new ComboBox{ItemsSource=new[]{"Inferior Centro","Inferior Derecha","Inferior Izquierda","Superior Centro","Superior Derecha","Superior Izquierda"},SelectedIndex=0,HorizontalAlignment=Avalonia.Layout.HorizontalAlignment.Stretch};
+  var skipFirst=new CheckBox{Content="Omitir en la primera página (portada)",IsChecked=false};
+  var size=new NumericUpDown{Value=10,Minimum=6,Maximum=36,FormatString="0"};
+  var accept=new Button{Content="Aplicar numeración",Classes={"primary"}};var cancel=new Button{Content="Cancelar"};
+  accept.Click+=(_,_)=>dialog.Close(true);cancel.Click+=(_,_)=>dialog.Close(false);
+  dialog.Content=new StackPanel{Margin=new Thickness(20),Spacing=10,Children={new TextBlock{Text="Formato (use {n} para página y {total} para total):"},format,new TextBlock{Text="Posición:"},posCombo,new TextBlock{Text="Tamaño (pt):"},size,skipFirst,new StackPanel{Orientation=Avalonia.Layout.Orientation.Horizontal,Spacing=10,Margin=new Thickness(0,10,0,0),Children={accept,cancel}}}};
+  if(!await dialog.ShowDialog<bool>(this))return;
+  var pos=posCombo.SelectedIndex switch {
+   1=>Mythlix.Core.HeaderFooterPosition.BottomRight,
+   2=>Mythlix.Core.HeaderFooterPosition.BottomLeft,
+   3=>Mythlix.Core.HeaderFooterPosition.TopCenter,
+   4=>Mythlix.Core.HeaderFooterPosition.TopRight,
+   5=>Mythlix.Core.HeaderFooterPosition.TopLeft,
+   _=>Mythlix.Core.HeaderFooterPosition.BottomCenter
+  };
+  await vm.ApplyHeaderFooterAsync(new(Format:format.Text??"Página {n} de {total}",Position:pos,FontSize:(double)(size.Value??10),SkipFirstPage:skipFirst.IsChecked==true));
+ });
+ async void WatermarkClick(object? s,RoutedEventArgs e)=>await Execute(async()=> {
+  if(vm.Selected is null)return;
+  var dialog=new Window{Title="Marca de agua de texto",Width=450,Height=350,WindowStartupLocation=WindowStartupLocation.CenterOwner,CanResize=false};
+  var text=new TextBox{Text="CONFIDENCIAL"};
+  var angle=new NumericUpDown{Value=45,Minimum=-90,Maximum=90,FormatString="0°"};
+  var opacity=new NumericUpDown{Value=25,Minimum=5,Maximum=90,FormatString="0%"};
+  var color=new TextBox{Text="#DC2626"};
+  var size=new NumericUpDown{Value=54,Minimum=12,Maximum=144,FormatString="0"};
+  var accept=new Button{Content="Aplicar marca de agua",Classes={"primary"}};var cancel=new Button{Content="Cancelar"};
+  accept.Click+=(_,_)=>dialog.Close(true);cancel.Click+=(_,_)=>dialog.Close(false);
+  var spAngle = new StackPanel{Children={new TextBlock{Text="Ángulo:"},angle}};
+  var spOpacity = new StackPanel{Children={new TextBlock{Text="Opacidad (%):"},opacity}};
+  Grid.SetColumn(spOpacity, 1);
+  var optionsGrid = new Grid{ColumnDefinitions=new ColumnDefinitions("*,*"),ColumnSpacing=8,Children={spAngle,spOpacity}};
+  dialog.Content=new StackPanel{Margin=new Thickness(20),Spacing=10,Children={new TextBlock{Text="Texto de la marca de agua:"},text,new TextBlock{Text="Color (#RRGGBB):"},color,optionsGrid,new TextBlock{Text="Tamaño (pt):"},size,new StackPanel{Orientation=Avalonia.Layout.Orientation.Horizontal,Spacing=10,Margin=new Thickness(0,10,0,0),Children={accept,cancel}}}};
+  if(!await dialog.ShowDialog<bool>(this))return;
+  await vm.ApplyWatermarkAsync(new(Text:text.Text??"CONFIDENCIAL",Rotation:(double)(angle.Value??45),FontSize:(double)(size.Value??54),Color:color.Text??"#DC2626",Opacity:(double)(opacity.Value??25)/100.0));
+ });
  async void ExtractPagesClick(object? s,RoutedEventArgs e)=>await Execute(async()=> {
   if(vm.Selected is not {} doc)return;
   var dialog=new Window{Title="Extraer contenido de páginas (sin marcadores ni formularios)",Width=470,Height=190,WindowStartupLocation=WindowStartupLocation.CenterOwner};

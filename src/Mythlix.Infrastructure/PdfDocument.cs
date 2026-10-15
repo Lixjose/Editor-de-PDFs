@@ -2,7 +2,7 @@ using Mythlix.Core;
 using PdfSharp.Pdf;
 using PdfSharp.Pdf.IO;
 namespace Mythlix.Infrastructure;
-public sealed class PdfDocumentSession : IPdfDocument, IContentEditor, ISearchablePdfEditor {
+public sealed class PdfDocumentSession : IPdfDocument, IContentEditor, ISearchablePdfEditor, IPageDecorator {
  PdfDocument document;
  public PdfDocumentSession(string path) {
   if (new FileInfo(path).Length > 256L * 1024 * 1024) throw new InvalidOperationException("Límite inicial: 256 MB por documento.");
@@ -43,6 +43,16 @@ public sealed class PdfDocumentSession : IPdfDocument, IContentEditor, ISearchab
   var before=Snapshot();
   try {TextEditing.OriginalTextEditor.Replace(document,document.Pages[page-1],GetPageGeometry(page),block,options);}
   catch {Restore(before);throw;}
+ }
+ public void ApplyHeaderFooter(HeaderFooterOptions options) {
+  var before=Snapshot();
+  try { PageDecorator.ApplyHeaderFooter(document, options); }
+  catch { Restore(before); throw; }
+ }
+ public void ApplyWatermark(WatermarkOptions options) {
+  var before=Snapshot();
+  try { PageDecorator.ApplyWatermark(document, options); }
+  catch { Restore(before); throw; }
  }
  public byte[] Snapshot() {
   using var stream = new MemoryStream(); document.Save(stream, false);

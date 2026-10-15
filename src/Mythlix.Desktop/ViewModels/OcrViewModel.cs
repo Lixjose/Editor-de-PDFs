@@ -58,9 +58,10 @@ public sealed partial class WorkspaceViewModel {
    for(var i=0;i<pages.Length;i++) {
     cancellation.Token.ThrowIfCancellationRequested();var page=pages[i];OcrStatus=$"Reconociendo página {page} ({i+1}/{pages.Length})…";Status=OcrStatus;
     var geometry=doc.Document.GetPageGeometry(page);
-    if(!geometry.CanEdit || geometry.Rotation!=0)throw new InvalidOperationException("OCR: las páginas deben estar sin recorte ni rotación en esta entrega.");
-    if(!SkipExistingText || string.IsNullOrWhiteSpace(await renderer.ExtractTextAsync(doc.WorkingPath,page,cancellation.Token))) {
-     var size=(int)Math.Min(4000,Math.Max(geometry.Width,geometry.Height)*300/72);
+    if(!geometry.CanEdit)throw new InvalidOperationException("OCR: use páginas editables.");
+    var existingText=SkipExistingText ? await renderer.ExtractTextAsync(doc.WorkingPath,page,cancellation.Token) : "";
+    if(!SkipExistingText || string.IsNullOrWhiteSpace(existingText) || existingText.Trim().Length < 50) {
+     var size=(int)Math.Min(4000,Math.Max(geometry.DisplayWidth,geometry.DisplayHeight)*300/72);
      var image=await poppler.RenderOcrAsync(doc.WorkingPath,page,size,cancellation.Token);
      var result=await ocr.RecognizeAsync(image,language,options,cancellation.Token);
      if(OcrPages.Sum(p=>p.Words.Count)+result.Words.Count>100000)throw new InvalidOperationException("Límite de revisión: 100 000 palabras por operación OCR.");
