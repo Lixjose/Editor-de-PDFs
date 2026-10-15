@@ -46,7 +46,7 @@ public sealed class PageCanvas : Control {
   if(vm.ActiveEditingOriginal is {} editing) {
    var factor=Bounds.Width/vm.Geometry.DisplayWidth;var box=vm.Geometry.ToDisplay(editing.Bounds);
    var maskRect=new Rect(box.X*factor-2,box.Y*factor-2,box.Width*factor+4,box.Height*factor+4);
-   context.DrawRectangle(Brushes.White,null,maskRect);
+   context.DrawRectangle(vm.EditingBackground,null,maskRect);
   }
   if(hoveredOriginal is {} hovered && hovered != vm.SelectedOriginal && hovered != vm.ActiveEditingOriginal) {
    var factor=Bounds.Width/vm.Geometry.DisplayWidth;var box=vm.Geometry.ToDisplay(hovered.Bounds);

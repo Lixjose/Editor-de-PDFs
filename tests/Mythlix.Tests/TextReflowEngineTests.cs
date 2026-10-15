@@ -281,6 +281,70 @@ public sealed class TextReflowEngineTests : IDisposable {
         Assert.Single(PdfParagraph.Around(first,[first,column,otherFont]).Lines);
     }
 
+    [Theory]
+    [InlineData("Uno dos",-17.5)]
+    [InlineData("Uno dos\nTres cuatro\nCinco seis\nSiete ocho",35)]
+    public void ParagraphResizeShiftsOnlyFollowingColumnAndPreservesStyle(string replacement,double delta) {
+        CreateSamplePdf("BT /F1 14 Tf 1 0 0 1 50 700 Tm (Una primera linea) Tj ET\nBT /F1 14 Tf 1 0 0 1 50 682.5 Tm (Segunda linea) Tj ET\nBT /F1 14 Tf 1 0 0 1 50 600 Tm (Bloque inferior que conserva formato) Tj ET\nBT /F1 14 Tf 1 0 0 1 50 582.5 Tm (Cola) Tj ET\nBT /F1 14 Tf 1 0 0 1 400 600 Tm (Lateral) Tj ET");
+        using var doc=new PdfDocumentSession(Source);
+        var rows=doc.AnalyzeText(1).Blocks;
+        var paragraph=PdfParagraph.Around(rows[0],rows);
+        Assert.Equal(2,paragraph.Lines.Count);
+        var lower=rows.Single(b=>b.Text.StartsWith("Bloque"));
+        var lateral=rows.Single(b=>b.Text=="Lateral");
+        doc.ReplaceParagraph(1,paragraph,new TextEditOptions(replacement,14));
+        var after=doc.AnalyzeText(1).Blocks;
+        var moved=after.Single(b=>b.Text==lower.Text);
+        Assert.Equal(lower.EffectiveBaseline+delta,moved.EffectiveBaseline,6);
+        Assert.Equal(rows.Single(b=>b.Text=="Cola").EffectiveBaseline+delta,after.Single(b=>b.Text=="Cola").EffectiveBaseline,6);
+        Assert.Equal(lower.Bounds.X,moved.Bounds.X);Assert.Equal(lower.FontName,moved.FontName);
+        Assert.Equal(lateral.Bounds,after.Single(b=>b.Text=="Lateral").Bounds);
+        // A second resize must work despite the empty placeholders from the first edit.
+        var edited=after.First();
+        var second=PdfParagraph.Around(edited,after);
+        doc.ReplaceParagraph(1,second,new TextEditOptions("Uno dos",14));
+        Assert.Contains(doc.AnalyzeText(1).Blocks,b=>b.Text=="Uno dos");
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void VerticalReflowRejectsOverflowOrFixedGraphicsAtomically(bool graphics) {
+        var tail=graphics?"50 300 100 40 re S":"BT /F1 14 Tf 1 0 0 1 50 40 Tm (Bloque inferior del documento) Tj ET";
+        CreateSamplePdf("BT /F1 14 Tf 1 0 0 1 50 700 Tm (Una primera linea) Tj ET\nBT /F1 14 Tf 1 0 0 1 50 682.5 Tm (Segunda linea) Tj ET\n"+tail);
+        using var doc=new PdfDocumentSession(Source);
+        var before=doc.AnalyzeText(1).Blocks;
+        var paragraph=PdfParagraph.Around(before[0],before);
+        var ex=Assert.Throws<InvalidOperationException>(()=>doc.ReplaceParagraph(1,paragraph,new TextEditOptions("Uno dos\nTres cuatro\nCinco seis\nSiete ocho",14)));
+        Assert.Contains("Desbordamiento",ex.Message);
+        Assert.Equal(before.Select(b=>(b.Text,b.Bounds)),doc.AnalyzeText(1).Blocks.Select(b=>(b.Text,b.Bounds)));
+    }
+
+    [Fact]
+    public void TwoLineJustificationUsesExplicitWordSpacing() {
+        var first=new OriginalTextBlock("0:0","Primera linea","Helvetica",12,new(30,40,200,12),"fp",Baseline:50,WordSpacing:2);
+        var last=first with {Id="0:1",Text="Final",Bounds=new(30,55,60,12),Baseline=65,WordSpacing=0};
+        Assert.Equal(TextAlignment.Justify,PdfParagraph.Around(first,[first,last]).Alignment);
+        Assert.Equal(TextAlignment.Left,PdfParagraph.Around(first with {WordSpacing=0},[first with {WordSpacing=0},last]).Alignment);
+    }
+
+    [Fact]
+    public void TwoLineJustificationCanUseMatchingConfirmedColumn() {
+        OriginalTextBlock Row(string id,double y,double width)=>new(id,"Texto de ejemplo","Helvetica",12,new(30,y,width,12),"fp",Baseline:y+10);
+        var rows=new[]{Row("0:0",40,200),Row("0:1",55,200),Row("0:2",70,70),Row("0:3",140,200),Row("0:4",155,60)};
+        Assert.Equal(TextAlignment.Justify,PdfParagraph.Around(rows[3],rows).Alignment);
+        var otherColumn=rows.Take(3).Select(b=>b with {Bounds=b.Bounds with {X=300}}).Concat(rows.Skip(3)).ToArray();
+        Assert.Equal(TextAlignment.Left,PdfParagraph.Around(rows[3],otherColumn).Alignment);
+    }
+
+    [Fact]
+    public void BackgroundSamplingAcceptsSolidColorAndRejectsGradients() {
+        const uint cream=0xFFF4E9D2;
+        Assert.Equal(cream,BackgroundColorSampler.UniformColor(Enumerable.Repeat(cream,100)));
+        Assert.Null(BackgroundColorSampler.UniformColor(Enumerable.Range(0,100).Select(i=>0xFF000000u+(uint)i*0x010101u)));
+        Assert.Null(BackgroundColorSampler.UniformColor([cream]));
+    }
+
     public void Dispose() {
         if(Directory.Exists(directory)) Directory.Delete(directory, true);
     }

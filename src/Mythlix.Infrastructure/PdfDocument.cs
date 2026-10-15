@@ -57,6 +57,35 @@ public sealed class PdfDocumentSession : IPdfDocument, IContentEditor, ISearchab
    var originals=AnalyzeText(page).Blocks;
    foreach(var line in paragraph.Lines)
     if(!originals.Any(b=>b.Id==line.Id && b.Fingerprint==line.Fingerprint)) throw new InvalidOperationException("El párrafo cambió; vuelva a seleccionarlo.");
+   var geometry=GetPageGeometry(page);
+   var newCount=TextEditing.OriginalTextEditor.ReplacementLineCount(paragraph.Lines[0],options,paragraph.Bounds.Width);
+   var delta=(Math.Max(1,newCount)-paragraph.Lines.Count)*paragraph.LineHeight;
+   if(Math.Abs(delta)>.01) {
+    var p=document.Pages[page-1];
+    var analysis=AnalyzeText(page);
+    if(geometry.Rotation!=0 || !geometry.CanEdit || analysis.UnsupportedBlocks>0 || GetGraphics(page).Count>0)
+     throw new InvalidOperationException("Desbordamiento: no se puede desplazar automáticamente una página con bloques no compatibles, gráficos o rotación.");
+    var fixedOperators=new HashSet<string>{"re","m","l","c","v","y","S","s","f","F","f*","B","B*","b","b*","Do","BI","sh"};
+    for(var i=0;i<p.Contents.Elements.Count;i++) {
+     var bytes=p.Contents.Elements.GetDictionary(i)?.Stream?.UnfilteredValue;
+     if(bytes is not null && TextEditing.ContentTokenizer.Read(bytes).Any(t=>t.Bytes is null && fixedOperators.Contains(t.Value)))
+      throw new InvalidOperationException("Desbordamiento: la página contiene gráficos o imágenes fijos; el desplazamiento automático está bloqueado.");
+    }
+    var ids=paragraph.Lines.Select(b=>b.Id).ToHashSet();
+    var bottom=paragraph.Bounds.Y+paragraph.Bounds.Height;
+    var seeds=originals.Where(b=>!ids.Contains(b.Id) && b.Bounds.Y>=bottom-0.5
+      && Math.Max(0,Math.Min(b.Bounds.X+b.Bounds.Width,paragraph.Bounds.X+paragraph.Bounds.Width)-Math.Max(b.Bounds.X,paragraph.Bounds.X))>=paragraph.Bounds.Width*.6).ToArray();
+    // Include short final rows of the same following paragraph, keeping its lines together.
+    var lower=seeds.SelectMany(b=>PdfParagraph.Around(b,originals).Lines)
+     .Where(b=>!ids.Contains(b.Id) && b.Bounds.Y>=bottom-.5).DistinctBy(b=>b.Id).ToArray();
+    if(bottom+delta>geometry.Height-36 || lower.Any(b=>b.Bounds.Y+b.Bounds.Height>geometry.Height-36 || b.Bounds.Y+delta<bottom+delta-0.5 || b.Bounds.Y+b.Bounds.Height+delta>geometry.Height-36))
+     throw new InvalidOperationException("Desbordamiento: el texto invadiría el margen inferior de 36 pt.");
+    var moving=lower.Select(b=>b.Bounds with {Y=b.Bounds.Y+delta}).Append(paragraph.Bounds with {Height=paragraph.Bounds.Height+delta}).ToArray();
+    var fixedRows=originals.Where(b=>!ids.Contains(b.Id) && !lower.Any(l=>l.Id==b.Id));
+    if(fixedRows.Any(b=>moving.Any(r=>Math.Min(r.X+r.Width,b.Bounds.X+b.Bounds.Width)>Math.Max(r.X,b.Bounds.X) && Math.Min(r.Y+r.Height,b.Bounds.Y+b.Bounds.Height)>Math.Max(r.Y,b.Bounds.Y)+.5)))
+     throw new InvalidOperationException("Desbordamiento: el desplazamiento chocaría con otro bloque fijo.");
+    TextEditing.OriginalTextEditor.ShiftLines(document,p,geometry,lower,delta);
+   }
    // Remove later rows first and refresh fingerprints after each stream mutation.
    foreach(var line in paragraph.Lines.Skip(1).Reverse()) {
     var current=AnalyzeText(page).Blocks.Single(b=>b.Id==line.Id);

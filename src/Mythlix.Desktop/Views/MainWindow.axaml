@@ -62,7 +62,7 @@
                 IsVisible="False"
                 AcceptsReturn="True"
                 TextWrapping="Wrap"
-                Background="#FFFFFF"
+                Background="{Binding EditingBackground}"
                 Foreground="#000000"
                 CaretBrush="#2563EB"
                 SelectionBrush="#332563EB"
@@ -78,7 +78,7 @@
                 LostFocus="DirectEditorLostFocus">
         <TextBox.Styles>
          <Style Selector="TextBox">
-          <Setter Property="Background" Value="#FFFFFF"/>
+          <Setter Property="Background" Value="{Binding EditingBackground}"/>
           <Setter Property="Foreground" Value="#000000"/>
           <Setter Property="Padding" Value="0"/>
           <Setter Property="MinHeight" Value="10"/>
@@ -86,12 +86,12 @@
           <Setter Property="VerticalContentAlignment" Value="Top"/>
          </Style>
          <Style Selector="TextBox:focus /template/ Border#PART_BorderElement">
-          <Setter Property="Background" Value="#FFFFFF"/>
+          <Setter Property="Background" Value="{Binding EditingBackground}"/>
           <Setter Property="BorderBrush" Value="#3B82F6"/>
           <Setter Property="BorderThickness" Value="0"/>
          </Style>
          <Style Selector="TextBox:pointerover /template/ Border#PART_BorderElement">
-          <Setter Property="Background" Value="#FFFFFF"/>
+          <Setter Property="Background" Value="{Binding EditingBackground}"/>
           <Setter Property="BorderBrush" Value="#3B82F6"/>
           <Setter Property="BorderThickness" Value="0"/>
          </Style>

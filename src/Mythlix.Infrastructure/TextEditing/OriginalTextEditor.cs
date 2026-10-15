@@ -19,7 +19,8 @@ internal static class OriginalTextEditor {
         string FontResourceName,
         string BaseFont,
         double BaselineX,
-        double BaselineY
+        double BaselineY,
+        Token PositionY
     );
 
     static readonly Encoding WindowsEncoding;
@@ -101,7 +102,10 @@ internal static class OriginalTextEditor {
 
                 var candidate = TryRead(page, geometry, stream.Index, id, stream.Data, block, btByteStart, btByteLength, textState);
                 for(var i=start+1;i<end;i++)Track(stream.Tokens,i);
-                if(candidate is null) rejected++; else candidates.Add(candidate);
+                if(candidate is null) {
+                    var strings=block.Where(t=>t.Bytes is not null).ToArray();
+                    if(strings.Length==0 || strings.Any(t=>t.Bytes!.Length>0))rejected++;
+                } else candidates.Add(candidate);
                 start = end;
             }
         }
@@ -224,6 +228,13 @@ internal static class OriginalTextEditor {
         if(value.Any(char.IsControl) || text.Bytes!.Contains((byte)173)) return null;
 
         var baseline = top + metrics.Ascent * size / 1000;
+        double? layoutWidth=null,layoutLeading=null;
+        var marker=System.Text.RegularExpressions.Regex.Match(Encoding.ASCII.GetString(bytes,btByteStart,btByteLength),@"(?m)^%MythlixLayout ([0-9.]+) ([0-9.]+)\r?$");
+        if(marker.Success && double.TryParse(marker.Groups[1].Value,NumberStyles.Float,CultureInfo.InvariantCulture,out var storedWidth)
+         && double.TryParse(marker.Groups[2].Value,NumberStyles.Float,CultureInfo.InvariantCulture,out var storedLeading)
+         && storedWidth>0 && storedWidth<=geometry.Width && storedLeading>0 && storedLeading<=geometry.Height) {
+            layoutWidth=storedWidth;layoutLeading=storedLeading;
+        }
         var blockObj = new OriginalTextBlock(
             id, value, family, size, new(x, top, width, height), fingerprint,
             CanChangeFontSize: true,
@@ -233,10 +244,33 @@ internal static class OriginalTextEditor {
             Alignment: TextAlignment.Left,
             LineCount: 1,
             Baseline: baseline,
-            CharacterSpacing: characterSpacing, WordSpacing: wordSpacing, HorizontalScale: horizontalScale
+            CharacterSpacing: characterSpacing, WordSpacing: wordSpacing, HorizontalScale: horizontalScale, LayoutWidth: layoutWidth, LayoutLineHeight: layoutLeading
         );
 
-        return new(blockObj, stream, text, tokens[font.i - 1], widths, winAnsi, btByteStart, btByteLength, name.TrimStart('/'), family, x, y);
+        return new(blockObj, stream, text, tokens[font.i - 1], widths, winAnsi, btByteStart, btByteLength, name.TrimStart('/'), family, x, y, tokens[position.i-1]);
+    }
+
+    internal static void ShiftLines(PdfDocument document,PdfPage page,PageGeometry geometry,IReadOnlyList<OriginalTextBlock> blocks,double delta) {
+        var candidates=Read(page,geometry).Items;
+        var selected=blocks.Select(b=>candidates.Single(c=>c.Block.Id==b.Id && c.Block.Fingerprint==b.Fingerprint)).ToArray();
+        foreach(var group in selected.GroupBy(c=>c.Stream)) {
+            var old=page.Contents.Elements.GetDictionary(group.Key)!;
+            var bytes=old.Stream!.UnfilteredValue;
+            foreach(var candidate in group.OrderByDescending(c=>c.PositionY.Start)) {
+                candidate.PositionY.Number(out var y);
+                var token=candidate.PositionY;
+                bytes=bytes[..token.Start].Concat(Encoding.ASCII.GetBytes((y-delta).ToString("G17",CultureInfo.InvariantCulture))).Concat(bytes[(token.Start+token.Length)..]).ToArray();
+            }
+            var updated=new PdfDictionary(document);
+            foreach(var key in old.Elements.Keys)if(key is not ("/Filter" or "/DecodeParms" or "/Length" or "/DL"))updated.Elements[key]=old.Elements[key];
+            updated.CreateStream(bytes);document.Internals.AddObject(updated);page.Contents.Elements[group.Key]=updated.Reference!;
+        }
+    }
+
+    internal static int ReplacementLineCount(OriginalTextBlock first,TextEditOptions options,double width) {
+        var family=FontSubstitutionService.ResolveBaseFont(options.FontFamily ?? first.FontName,options.Bold,options.Italic);
+        var widths=FontSubstitutionService.GetMetrics(family).Widths.Select(w=>(double)w).ToArray();
+        return ParagraphReflow.Reflow(options.Text,options.FontSize,widths,WindowsEncoding,width/first.HorizontalScale,options.Alignment,first.CharacterSpacing,first.WordSpacing).Count;
     }
 
     public static void Replace(PdfDocument document, PdfPage page, PageGeometry geometry, OriginalTextBlock selected, string replacement, double fontSize) {
@@ -309,13 +343,15 @@ internal static class OriginalTextEditor {
         var targetWidths = targetMetrics.Widths.Select(w => (double)w).ToArray();
         var fontRes = FontSubstitutionService.EnsureFontResource(page, document, targetBaseFont);
 
-        double maxWidth = options.MaxWidth ?? Math.Max(candidate.Block.Bounds.Width, 100);
+        double maxWidth = options.MaxWidth ?? candidate.Block.LayoutWidth ?? Math.Max(candidate.Block.Bounds.Width, 100);
         var characterSpacing=candidate.Block.CharacterSpacing;
         var horizontalScale=candidate.Block.HorizontalScale;
         var lines = ParagraphReflow.Reflow(options.Text, options.FontSize, targetWidths, WindowsEncoding, maxWidth/horizontalScale, options.Alignment, characterSpacing, candidate.Block.WordSpacing);
 
         var sb = new StringBuilder();
-        sb.AppendLine("q\nBT\n0 Tw 0 Ts 0 Tr");
+        sb.AppendLine("q\nBT");
+        sb.AppendLine($"%MythlixLayout {maxWidth.ToString("G17",CultureInfo.InvariantCulture)} {(options.LineHeight ?? candidate.Block.LayoutLineHeight ?? options.FontSize*1.25).ToString("G17",CultureInfo.InvariantCulture)}");
+        sb.AppendLine("0 Tw 0 Ts 0 Tr");
         sb.AppendLine($"{characterSpacing.ToString("G17",CultureInfo.InvariantCulture)} Tc {(horizontalScale*100).ToString("G17",CultureInfo.InvariantCulture)} Tz");
         sb.AppendLine($"/{fontRes} {options.FontSize.ToString("G17", CultureInfo.InvariantCulture)} Tf");
 
@@ -335,7 +371,7 @@ internal static class OriginalTextEditor {
             sb.AppendLine($"1 0 0 1 {startX.ToString("G17", CultureInfo.InvariantCulture)} {startBaselineY.ToString("G17", CultureInfo.InvariantCulture)} Tm () Tj");
         } else {
             var header=sb.ToString();
-            double leading = options.LineHeight ?? options.FontSize * 1.25;
+            double leading = options.LineHeight ?? candidate.Block.LayoutLineHeight ?? options.FontSize * 1.25;
             for(var i = 0; i < lines.Count; i++) {
                 if(i>0) {sb.AppendLine("ET\nQ");sb.Append(header);}
                 var line = lines[i];

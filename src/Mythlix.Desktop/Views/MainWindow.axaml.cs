@@ -287,6 +287,7 @@ public partial class MainWindow : Window {
  });
  async void RotateClick(object? s,RoutedEventArgs e) {
   await CommitDirectEditAsync();
+  if(DirectEditor.IsVisible)return;
   await Execute(async()=>{await vm.EditAsync("rotate");if(autoFit)FitPageToView();});
  }
  async void AddClick(object? s,RoutedEventArgs e)=>await Execute(()=>vm.EditAsync("add"));
@@ -347,13 +348,20 @@ public partial class MainWindow : Window {
   if(isCommitting) return;
   isDirectCanceling = false;
   var paragraph=Mythlix.Core.PdfParagraph.Around(block,vm.OriginalBlocks);
-  activeEditingParagraph=vm.Geometry.Rotation==0 && paragraph.Lines.Count>1?paragraph:null;
+  activeEditingParagraph=vm.Geometry.Rotation==0 && (paragraph.Lines.Count>1 || block.LayoutWidth.HasValue)?paragraph:null;
   if(activeEditingParagraph is not null) {
    block=paragraph.Lines[0] with {Text=paragraph.Text,Bounds=paragraph.Bounds,Alignment=paragraph.Alignment,LineCount=paragraph.Lines.Count};
    var bounds=vm.Geometry.ToDisplay(paragraph.Bounds);
    var factor=PdfCanvas.Bounds.Width/vm.Geometry.DisplayWidth;
    rect=new Rect(bounds.X*factor,bounds.Y*factor,bounds.Width*factor,bounds.Height*factor);
   }
+  var background=vm.PageImage is {} image?Controls.EditingBackground.Sample(image,rect,PdfCanvas.Bounds.Size):null;
+  if(background is null) {
+   activeEditingParagraph=null;
+   vm.Status="Fondo no uniforme: use el panel de texto para editar sin ocultar imágenes o degradados.";
+   return;
+  }
+  vm.EditingBackground=background;
   activeEditingOriginal = block;
   activeEditingGraphic = null;
   vm.ActiveEditingOriginal = block;
@@ -412,6 +420,9 @@ public partial class MainWindow : Window {
   DirectEditor.TextAlignment=Avalonia.Media.TextAlignment.Left;
   DirectEditor.LineHeight=double.NaN;
   DirectEditor.RenderTransform=null;
+  var background=vm.PageImage is {} image?Controls.EditingBackground.Sample(image,rect,PdfCanvas.Bounds.Size):null;
+  if(background is null) {vm.Status="Fondo no uniforme: use el panel de propiedades para editar el texto.";return;}
+  vm.EditingBackground=background;
   activeEditingGraphic = obj;
   vm.ActiveEditingOriginal = null;
 
@@ -511,7 +522,14 @@ public partial class MainWindow : Window {
    var newText = DirectEditor.Text ?? "";
    if(targetOrig is not null) {
     if(newText != targetOrig.Text) {
-     if(paragraph is not null) await vm.CommitParagraphAsync(paragraph,newText);
+     if(paragraph is not null) {
+      var revision=vm.Selected?.Revision;
+      await vm.CommitParagraphAsync(paragraph,newText);
+      if(vm.Selected?.Revision==revision) {
+       activeEditingOriginal=targetOrig;activeEditingParagraph=paragraph;
+       vm.ActiveEditingOriginal=targetOrig;DirectEditor.IsVisible=true;DirectEditor.Focus();
+      }
+     }
      else await vm.CommitOriginalTextDirectAsync(targetOrig, newText, targetOrig.FontName, targetOrig.FontSize, null, targetOrig.Bold, targetOrig.Italic, targetOrig.Bounds.X, targetOrig.EffectiveBaseline);
     }
    } else if(targetGraph is not null) {

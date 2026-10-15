@@ -21,6 +21,7 @@ public sealed partial class WorkspaceViewModel {
 
  [ObservableProperty] private OriginalTextBlock? selectedOriginal;
  [ObservableProperty] private OriginalTextBlock? activeEditingOriginal;
+ [ObservableProperty] private Avalonia.Media.IBrush editingBackground = Avalonia.Media.Brushes.White;
  [ObservableProperty] private string originalDraftText = "";
  [ObservableProperty] private double originalDraftSize = 14;
  [ObservableProperty] private string originalDraftColor = "#000000";
