@@ -9,7 +9,7 @@ namespace Mythlix.Infrastructure.TextEditing;
 /// <summary>Immutable encoding capability snapshot of resources used by supported native runs.
 /// Not a commit validator: the owning session must recheck revision/fingerprints before future writes.</summary>
 internal sealed class NativeWinAnsiEncodingResolver : IRunMetricsProvider {
- sealed record Metrics(ImmutableArray<double> Widths,double AscentEm,double DescentEm);
+ sealed record Metrics(ImmutableArray<double> Widths,double AscentEm,double DescentEm,string Fingerprint);
  readonly ImmutableDictionary<PdfFontReference,Metrics> fonts;
  static readonly Encoding WinAnsi;
  static NativeWinAnsiEncodingResolver() {
@@ -23,12 +23,16 @@ internal sealed class NativeWinAnsiEncodingResolver : IRunMetricsProvider {
   var builder=ImmutableDictionary.CreateBuilder<PdfFontReference,Metrics>();
   foreach(var reference in analysis.Runs.Select(r=>r.Run.Style.Font).Distinct()) {
    if(reference.ResourceScopeId!=scope) throw new InvalidOperationException("El ámbito de recursos cambió.");
-   var font=NativeRunExtractor.ReadFont(dictionary?.Elements.GetDictionary(reference.ResourceName));
+   var resource=dictionary?.Elements.GetDictionary(reference.ResourceName);
+   var font=NativeRunExtractor.ReadFont(resource);
    var vertical=StandardFontMetrics.Fonts[font.Family];
-   builder.Add(reference,new(font.Widths.ToImmutableArray(),vertical.Ascent/1000d,-vertical.Descent/1000d));
+   var signature=font.Family+"|"+string.Join(",",font.Widths.Select(w=>w.ToString("R",CultureInfo.InvariantCulture)))+"|"+resource;
+   var fingerprint=Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(signature)));
+   builder.Add(reference,new(font.Widths.ToImmutableArray(),vertical.Ascent/1000d,-vertical.Descent/1000d,fingerprint));
   }
   return new(builder.ToImmutable());
  }
+ public string GetResourceFingerprint(PdfFontReference font) => fonts.TryGetValue(font,out var value)?value.Fingerprint:"unavailable";
  public RunMetricsResult Measure(PdfRunStyle style,string text) {
   ArgumentNullException.ThrowIfNull(style);
   var encoded=Encode(style.Font,text);

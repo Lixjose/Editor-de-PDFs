@@ -2,7 +2,7 @@ using Mythlix.Core;
 using PdfSharp.Pdf;
 using PdfSharp.Pdf.IO;
 namespace Mythlix.Infrastructure;
-public sealed class PdfDocumentSession : IPdfDocument, IContentEditor, ISearchablePdfEditor, IPageDecorator, Mythlix.Core.TextEditing.ITextRunInspector {
+public sealed partial class PdfDocumentSession : IPdfDocument, IContentEditor, ISearchablePdfEditor, IPageDecorator, Mythlix.Core.TextEditing.ITextRunInspector, Mythlix.Core.TextEditing.IParagraphCompositionWriter {
  PdfDocument document;
  readonly Guid textDocumentId = Guid.NewGuid();
  public PdfDocumentSession(string path) {

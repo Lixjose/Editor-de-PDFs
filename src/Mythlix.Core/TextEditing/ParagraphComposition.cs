@@ -9,6 +9,7 @@ public sealed record RunMetricsResult(ImmutableArray<byte> EncodedBytes, Immutab
 }
 public interface IRunMetricsProvider : IFontEncodingResolver {
  RunMetricsResult Measure(PdfRunStyle style,string text);
+ string GetResourceFingerprint(PdfFontReference font);
 }
 
 /// <summary>Page coordinates are points from top-left. First baseline excludes text rise Ts.</summary>
@@ -47,6 +48,7 @@ public sealed record ParagraphCompositionSnapshot(TextDocumentContext Context,st
  ImmutableArray<TextSourceSpan> OriginalSources,ParagraphCompositionOptions Options,
  ImmutableArray<ComposedTextLine> Lines,ObjectBounds? ComposedBounds,
  ImmutableArray<RunEditDiagnostic> Diagnostics) {
+ public ImmutableDictionary<PdfFontReference,string> FontResourceFingerprints { get; init; } = ImmutableDictionary<PdfFontReference,string>.Empty;
  public bool HasHorizontalOverflow => Diagnostics.Any(d=>d.Code=="HorizontalOverflow");
  public bool HasVerticalOverflow => Diagnostics.Any(d=>d.Code=="VerticalOverflow");
  public bool IsValid => Diagnostics.IsEmpty;

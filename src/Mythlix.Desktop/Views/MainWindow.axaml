@@ -134,7 +134,7 @@
       <TextBlock Text="{Binding OriginalStatus}" FontSize="11" Foreground="#918FA1" TextWrapping="Wrap"/>
       <ListBox ItemsSource="{Binding OriginalBlocks}" SelectedItem="{Binding SelectedOriginal, Mode=TwoWay}" MaxHeight="115" IsEnabled="{Binding !Busy}"><ListBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Label}" FontSize="12" TextTrimming="CharacterEllipsis"/></DataTemplate></ListBox.ItemTemplate></ListBox>
 
-      <Expander Header="Fragmentos · solo lectura" HorizontalAlignment="Stretch">
+      <Expander Header="Análisis de fragmentos" HorizontalAlignment="Stretch">
        <StackPanel Spacing="6" IsEnabled="{Binding !Busy}">
         <Button Content="Analizar fragmentos" Command="{Binding InspectTextRunsCommand}" IsEnabled="{Binding !IsEmpty}" HorizontalAlignment="Stretch"/>
         <TextBlock Text="{Binding TextInspectionStatus}" TextWrapping="Wrap" FontSize="11"/>
@@ -143,6 +143,7 @@
         <ListBox ItemsSource="{Binding InspectedTextBlocks}" SelectedItem="{Binding SelectedInspectedBlock, Mode=TwoWay}" MaxHeight="120">
          <ListBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Label}" TextWrapping="Wrap" FontSize="11"/></DataTemplate></ListBox.ItemTemplate>
         </ListBox>
+        <Button Content="Editar borrador y recomponer…" Click="OnCompositionPreview" HorizontalAlignment="Stretch"/>
         <TextBlock Text="{Binding SelectedInspectedBlock.Summary}" TextWrapping="Wrap" FontSize="11"/>
         <TextBlock Text="{Binding SelectedInspectionDiagnostics}" TextWrapping="Wrap" Foreground="#E9B96E" FontSize="11"/>
         <ScrollViewer MaxHeight="180">

@@ -56,4 +56,6 @@ Comprobación integrada de división y navegación: `dotnet run --project src/My
 
 La preparación de la nueva fase de estilos mixtos, su alcance y criterios de aceptación están en [Fase 1: fragmentos con procedencia](docs/text-editing/PHASE1_PREPARATION.md). Esta preparación conserva el motor y los flujos de edición actuales.
 
-La inspección de fragmentos está en **Texto original → Fragmentos · solo lectura → Analizar fragmentos**. Muestra estilos y diagnósticos a petición; no activa escritura mixta ni altera la edición existente.
+La inspección está en **Texto original → Análisis de fragmentos → Analizar fragmentos**. Tras seleccionar un bloque compatible de una sola línea, **Editar borrador y recomponer…** abre el editor mixto. El borrador conserva los estilos no modificados y dispone de Deshacer/Rehacer propios. Se pueden ajustar posición, rectángulo, línea base, interlineado y alineación.
+
+Elija un archivo físico por fuente para la vista aproximada, pulse **Componer y revisar** y acepte el reflujo antes de **Aplicar al PDF**. La escritura usa los recursos PDF originales, registra una entrada en Deshacer y permite Rehacer. Cancelar no modifica el documento. Un cambio de texto, opciones o fuente exige revisar una nueva composición. El primer alcance admite WinAnsi/Type1 estándar y rechaza bloques originales de varias líneas, colisiones y fondos dibujados. Detalles y validación: [Composición compartida, fases 2A–2C](docs/text-editing/PHASE2_COMPOSITION.md).

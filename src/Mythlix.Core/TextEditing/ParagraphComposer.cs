@@ -71,7 +71,10 @@ public static class ParagraphComposer {
   return Snapshot(composed,new(left,top,right-left,bottom-top));
 
   ParagraphCompositionSnapshot Snapshot(ImmutableArray<ComposedTextLine> result,ObjectBounds? bounds) =>
-   new(buffer.Context,buffer.Text,buffer.OriginalSources,options,result,bounds,errors.ToImmutable());
+   new(buffer.Context,buffer.Text,buffer.OriginalSources,options,result,bounds,errors.ToImmutable()) {
+    FontResourceFingerprints=buffer.Runs.Select(r=>r.Style.Font).Append(buffer.EmptyStyle.Font).Distinct()
+     .ToImmutableDictionary(f=>f,f=>provider.GetResourceFingerprint(f))
+   };
 
   void Flush(CompositionBreakKind kind,TextRange? hardBreak) {
    var range=new TextRange(lineStart,current.Count);

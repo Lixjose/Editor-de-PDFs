@@ -31,6 +31,16 @@ public partial class MainWindow : Window {
    var path=args.FirstOrDefault(a=>a.EndsWith(".pdf",StringComparison.OrdinalIgnoreCase));
    if(path is null) return;
    await Execute(async()=>{await vm.OpenAsync(path);await vm.RenderAsync();});
+   if(args.Contains("--composition-edit-smoke")) {
+    try {await Diagnostics.CompositionPreviewSmokeTest.RunAsync(vm,this,true);Console.WriteLine("MYTHLIX_COMPOSITION_EDIT_SMOKE_OK");}
+    catch(Exception ex) {Console.WriteLine("MYTHLIX_COMPOSITION_EDIT_SMOKE_FAILED: "+ex);Environment.ExitCode=1;}
+    closing=true;vm.Dispose();Close();return;
+   }
+   if(args.Contains("--composition-preview-smoke")) {
+    try {await Diagnostics.CompositionPreviewSmokeTest.RunAsync(vm,this);Console.WriteLine("MYTHLIX_COMPOSITION_PREVIEW_SMOKE_OK");}
+    catch(Exception ex) {Console.WriteLine("MYTHLIX_COMPOSITION_PREVIEW_SMOKE_FAILED: " + ex);Environment.ExitCode=1;}
+    closing=true;vm.Dispose();Close();return;
+   }
    if(args.Contains("--text-inspection-smoke")) {
     try {await Diagnostics.TextInspectionSmokeTest.RunAsync(vm);Console.WriteLine("MYTHLIX_TEXT_INSPECTION_SMOKE_OK");}
     catch(Exception ex) {Console.WriteLine("MYTHLIX_TEXT_INSPECTION_SMOKE_FAILED: " + ex);Environment.ExitCode=1;}
