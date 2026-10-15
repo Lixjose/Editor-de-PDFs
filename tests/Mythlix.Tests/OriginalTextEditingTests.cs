@@ -90,5 +90,31 @@ public sealed class OriginalTextEditingTests:IDisposable {
   Assert.Throws<InvalidOperationException>(()=>doc.ReplaceText(1,block,"Title",12));
   doc.ReplaceText(1,block,"Title",18);Assert.Equal("Title",Assert.Single(doc.AnalyzeText(1).Blocks).Text);
  }
+ [Fact] public async Task VectorTextReplacementMasksOriginalAndInsertsNewText(){
+  using var doc=new PdfDocumentSession(Source);
+  var fakeBlock=new OriginalTextBlock("v:1:0","Original document title","Liberation Sans",18,new ObjectBounds(60,100,280,24),"fp1");
+  doc.ReplaceText(1,fakeBlock,"Replaced by Vector Engine",18);
+  await doc.SaveCopyAsync(Output);
+  var text=await new PopplerRenderer().ExtractTextAsync(Output,1,CancellationToken.None);
+  Assert.Contains("Replaced by Vector Engine",text);
+  Assert.DoesNotContain("Original document title",text);
+ }
+ [Fact] public async Task LibreOfficePdfCanBeExtractedAndEditedDirectlyWithoutOcr(){
+  var libreOfficePath = "/tmp/test-libreoffice.pdf";
+  if(!File.Exists(libreOfficePath)) return;
+  var renderer = new PopplerRenderer();
+  var tsv = await renderer.ExtractTsvAsync(libreOfficePath, 1, CancellationToken.None);
+  var analysis = Mythlix.Infrastructure.TextEditing.VectorTextExtractor.Extract(tsv, 1, new PageGeometry(612, 792, 0));
+  Assert.NotEmpty(analysis.Blocks);
+  var block = analysis.Blocks[0];
+  Assert.Contains("LibreOffice", block.Text);
+
+  using var doc = new PdfDocumentSession(libreOfficePath);
+  doc.ReplaceText(1, block, "Texto editado directamente sin OCR en LibreOffice", 12);
+  var outPath = Path.Combine(directory, "libreoffice-edited.pdf");
+  await doc.SaveCopyAsync(outPath);
+  var extracted = await renderer.ExtractTextAsync(outPath, 1, CancellationToken.None);
+  Assert.Contains("Texto editado directamente sin OCR en LibreOffice", extracted);
+ }
  public void Dispose()=>Directory.Delete(directory,true);
 }

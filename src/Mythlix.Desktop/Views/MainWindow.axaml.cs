@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
 using Mythlix.Desktop.ViewModels;
@@ -10,7 +11,12 @@ public partial class MainWindow : Window {
  bool autoFit=true;
  public MainWindow() {
   InitializeComponent(); DataContext=vm; Closing += OnClosing;
-  vm.PropertyChanged+=(_,e)=>{if(autoFit && e.PropertyName is nameof(vm.PageImage) or nameof(vm.Geometry))FitPageToView();};
+  PdfCanvas.TextDoubleClicked += OnTextDoubleClicked;
+  PdfCanvas.GraphicTextDoubleClicked += OnGraphicTextDoubleClicked;
+  vm.PropertyChanged+=(_,e)=>{
+   if(e.PropertyName is nameof(vm.CurrentPage) or nameof(vm.PageImage) or nameof(vm.Selected)) InlineEditBorder.IsVisible = false;
+   if(autoFit && e.PropertyName is nameof(vm.PageImage) or nameof(vm.Geometry))FitPageToView();
+  };
   Viewport.PropertyChanged+=(_,e)=>{if(autoFit && e.Property==BoundsProperty)FitPageToView();};
   Opened += async (_,_) => {
    var args=Environment.GetCommandLineArgs().Skip(1).ToArray();
@@ -304,4 +310,44 @@ public partial class MainWindow : Window {
   });
   await vm.InsertImageAsync(bytes,ratio);
  });
+ void OnTextDoubleClicked(Mythlix.Core.OriginalTextBlock block, Rect rect) {
+  Canvas.SetLeft(InlineEditBorder, Math.Clamp(rect.X - 4, 0, Math.Max(0, vm.DisplayWidth - 200)));
+  Canvas.SetTop(InlineEditBorder, Math.Clamp(rect.Y - 4, 0, Math.Max(0, vm.DisplayHeight - 80)));
+  InlineEditBorder.Width = Math.Clamp(rect.Width + 28, 200, Math.Max(200, vm.DisplayWidth - 20));
+  InlineEditText.Text = block.Text;
+  InlineEditBorder.IsVisible = true;
+  InlineEditText.Focus();
+  InlineEditText.SelectAll();
+ }
+ void OnGraphicTextDoubleClicked(Mythlix.Core.GraphicObject obj, Rect rect) {
+  Canvas.SetLeft(InlineEditBorder, Math.Clamp(rect.X - 4, 0, Math.Max(0, vm.DisplayWidth - 200)));
+  Canvas.SetTop(InlineEditBorder, Math.Clamp(rect.Y - 4, 0, Math.Max(0, vm.DisplayHeight - 80)));
+  InlineEditBorder.Width = Math.Clamp(rect.Width + 28, 200, Math.Max(200, vm.DisplayWidth - 20));
+  InlineEditText.Text = obj.Text;
+  InlineEditBorder.IsVisible = true;
+  InlineEditText.Focus();
+  InlineEditText.SelectAll();
+ }
+ void InlineTextKeyDown(object? sender, KeyEventArgs e) {
+  if(e.Key == Key.Enter && !e.KeyModifiers.HasFlag(KeyModifiers.Shift)) {
+   InlineApplyClick(sender, e);
+   e.Handled = true;
+  } else if(e.Key == Key.Escape) {
+   InlineCancelClick(sender, e);
+   e.Handled = true;
+  }
+ }
+ async void InlineApplyClick(object? sender, RoutedEventArgs e) {
+  InlineEditBorder.IsVisible = false;
+  if(vm.SelectedOriginal is not null) {
+   vm.OriginalDraftText = InlineEditText.Text ?? "";
+   await vm.ApplyOriginalCommand.ExecuteAsync(null);
+  } else if(vm.SelectedGraphic is not null) {
+   vm.ObjectText = InlineEditText.Text ?? "";
+   await vm.ApplyGraphicCommand.ExecuteAsync(null);
+  }
+ }
+ void InlineCancelClick(object? sender, RoutedEventArgs e) {
+  InlineEditBorder.IsVisible = false;
+ }
 }

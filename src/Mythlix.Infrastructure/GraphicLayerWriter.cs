@@ -104,8 +104,22 @@ internal static class GraphicLayerWriter {
      graphics.DrawImage(image,rectangle);
     }
     break;
-   case GraphicKind.Rectangle: graphics.DrawRectangle(pen,rectangle); break;
-   case GraphicKind.Ellipse: graphics.DrawEllipse(pen,rectangle); break;
+   case GraphicKind.Rectangle:
+    if(!string.IsNullOrEmpty(item.FillColor)) {
+     var fillRgb=Convert.ToUInt32(item.FillColor[1..],16);
+     var fillXColor=XColor.FromArgb((int)((fillRgb>>16)&255),(int)((fillRgb>>8)&255),(int)(fillRgb&255));
+     graphics.DrawRectangle(new XSolidBrush(fillXColor),rectangle);
+    }
+    if(item.StrokeWidth > 0) graphics.DrawRectangle(pen,rectangle);
+    break;
+   case GraphicKind.Ellipse:
+    if(!string.IsNullOrEmpty(item.FillColor)) {
+     var fillRgb=Convert.ToUInt32(item.FillColor[1..],16);
+     var fillXColor=XColor.FromArgb((int)((fillRgb>>16)&255),(int)((fillRgb>>8)&255),(int)(fillRgb&255));
+     graphics.DrawEllipse(new XSolidBrush(fillXColor),rectangle);
+    }
+    if(item.StrokeWidth > 0) graphics.DrawEllipse(pen,rectangle);
+    break;
    case GraphicKind.Line: graphics.DrawLine(pen,item.X,item.Y,item.X+item.Width,item.Y+item.Height); break;
    default: throw new InvalidOperationException("Tipo de objeto no compatible.");
   }

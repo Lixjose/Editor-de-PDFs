@@ -21,6 +21,7 @@ public sealed class PopplerRenderer : IPdfRenderer {
   return output.ToArray();
  }
  public Task<byte[]> RenderAsync(string path, int page, int width, CancellationToken token) => Run("pdftoppm", ["-f",page.ToString(),"-l",page.ToString(),"-singlefile","-scale-to",Math.Clamp(width, 128, 2400).ToString(),"-png",path],token);
- public Task<byte[]> RenderOcrAsync(string path,int page,int size,CancellationToken token)=>Run("pdftoppm",["-f",page.ToString(),"-l",page.ToString(),"-singlefile","-scale-to",Math.Clamp(size,1000,4000).ToString(),"-png",path],token);
+ public Task<byte[]> RenderOcrAsync(string path,int page,int size,CancellationToken token)=>Run("pdftoppm",["-f",page.ToString(),"-l",page.ToString(),"-singlefile","-r","300","-png",path],token);
  public async Task<string> ExtractTextAsync(string path,int page,CancellationToken token) => System.Text.Encoding.UTF8.GetString(await Run("pdftotext",["-f",page.ToString(),"-l",page.ToString(),"-layout",path,"-"],token));
+ public async Task<string> ExtractTsvAsync(string path,int page,CancellationToken token) => System.Text.Encoding.UTF8.GetString(await Run("pdftotext",["-f",page.ToString(),"-l",page.ToString(),"-tsv",path,"-"],token));
 }

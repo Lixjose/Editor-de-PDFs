@@ -11,6 +11,10 @@ namespace Mythlix.Desktop.Controls;
 public sealed class PageCanvas : Control {
  public static readonly StyledProperty<WorkspaceViewModel?> WorkspaceProperty = AvaloniaProperty.Register<PageCanvas,WorkspaceViewModel?>(nameof(Workspace));
  public WorkspaceViewModel? Workspace {get=>GetValue(WorkspaceProperty);set=>SetValue(WorkspaceProperty,value);}
+ 
+ public event Action<OriginalTextBlock, Rect>? TextDoubleClicked;
+ public event Action<GraphicObject, Rect>? GraphicTextDoubleClicked;
+
  GraphicObject? dragObject;
  ObjectBounds? preview;
  Point start;
@@ -58,14 +62,35 @@ public sealed class PageCanvas : Control {
   }
   if(!resizing)vm.SelectedGraphic=vm.PageObjects.Reverse().FirstOrDefault(item=>vm.Geometry.ToDisplay(new(item.X,item.Y,item.Width,item.Height)).Contains(start.X,start.Y));
   if(vm.SelectedGraphic is null)vm.SelectedOriginal=vm.OriginalBlocks.Reverse().FirstOrDefault(item=>vm.Geometry.ToDisplay(item.Bounds).Contains(start.X,start.Y));
+
+  if(e.ClickCount == 2) {
+   if(vm.SelectedOriginal is {} orig) {
+    var factor=Bounds.Width/vm.Geometry.DisplayWidth;
+    var box=vm.Geometry.ToDisplay(orig.Bounds);
+    TextDoubleClicked?.Invoke(orig, new Rect(box.X*factor, box.Y*factor, box.Width*factor, box.Height*factor));
+   } else if(vm.SelectedGraphic is { Kind: GraphicKind.Text } grp) {
+    var factor=Bounds.Width/vm.Geometry.DisplayWidth;
+    var box=vm.Geometry.ToDisplay(new(grp.X, grp.Y, grp.Width, grp.Height));
+    GraphicTextDoubleClicked?.Invoke(grp, new Rect(box.X*factor, box.Y*factor, box.Width*factor, box.Height*factor));
+   }
+  }
+
   dragObject=vm.SelectedGraphic; preview=null; moved=false;
   if(dragObject is not null)e.Pointer.Capture(this);
   InvalidateVisual();e.Handled=true;
  }
  protected override void OnPointerMoved(PointerEventArgs e) {
   base.OnPointerMoved(e);
-  var vm=Workspace;if(vm is null || dragObject is null || vm.Busy)return;
+  var vm=Workspace;if(vm is null || vm.Busy)return;
   var scale=Bounds.Width/vm.Geometry.DisplayWidth;var p=e.GetPosition(this);
+  if(dragObject is null && vm.Geometry.CanEdit) {
+   var scaledPt = new Point(p.X/scale, p.Y/scale);
+   var overText = vm.OriginalBlocks.Any(item => vm.Geometry.ToDisplay(item.Bounds).Contains(scaledPt.X, scaledPt.Y))
+    || vm.PageObjects.Any(item => item.Kind == GraphicKind.Text && vm.Geometry.ToDisplay(new(item.X, item.Y, item.Width, item.Height)).Contains(scaledPt.X, scaledPt.Y));
+   Cursor = overText ? new Cursor(StandardCursorType.Ibeam) : Cursor.Default;
+   return;
+  }
+  if(dragObject is null)return;
   var dx=p.X/scale-start.X;var dy=p.Y/scale-start.Y;
   if(Math.Abs(dx)+Math.Abs(dy)<.5 && !moved)return;
   moved=true;

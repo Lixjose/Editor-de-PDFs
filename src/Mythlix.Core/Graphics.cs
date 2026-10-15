@@ -15,6 +15,7 @@ public sealed record GraphicObject {
  public bool Bold { get; init; }
  public bool Italic { get; init; }
  public string Color { get; init; } = "#4F46E5";
+ public string? FillColor { get; init; }
  public double StrokeWidth { get; init; } = 2;
  public byte[]? ImageData { get; init; }
  public TextAlignment Alignment { get; init; } = TextAlignment.Left;
@@ -30,10 +31,12 @@ public sealed record GraphicObject {
   var numbers = new[] { X, Y, Width, Height, FontSize, StrokeWidth };
   if(numbers.Any(v => !double.IsFinite(v)) || X < 0 || Y < 0 || Width < 4 || Height < 4 || X + Width > page.Width + .01 || Y + Height > page.Height + .01)
    throw new InvalidOperationException("El objeto debe quedar dentro de la página, con dimensiones de al menos 4 pt.");
-  if(FontSize is < 4 or > 144 || StrokeWidth is < .1 or > 20)
-   throw new InvalidOperationException("Tamaño de fuente: 4–144 pt. Trazo: 0,1–20 pt.");
+  if(FontSize is < 4 or > 144 || StrokeWidth is < 0 or > 20)
+   throw new InvalidOperationException("Tamaño de fuente: 4–144 pt. Trazo: 0–20 pt.");
   if(Color.Length != 7 || Color[0] != '#' || !uint.TryParse(Color.AsSpan(1), System.Globalization.NumberStyles.HexNumber, null, out _))
    throw new InvalidOperationException("Use un color hexadecimal #RRGGBB.");
+  if(FillColor is not null && (FillColor.Length != 7 || FillColor[0] != '#' || !uint.TryParse(FillColor.AsSpan(1), System.Globalization.NumberStyles.HexNumber, null, out _)))
+   throw new InvalidOperationException("Use un color de relleno hexadecimal #RRGGBB.");
   if(Text.Length > 10000) throw new InvalidOperationException("Límite de texto: 10 000 caracteres por objeto.");
   if(Kind == GraphicKind.Image && (ImageData is null || ImageData.Length is 0 or > 10 * 1024 * 1024))
    throw new InvalidOperationException("La imagen debe tener un máximo de 10 MB.");

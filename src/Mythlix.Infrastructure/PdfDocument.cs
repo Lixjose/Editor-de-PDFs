@@ -41,8 +41,116 @@ public sealed class PdfDocumentSession : IPdfDocument, IContentEditor, ISearchab
   ReplaceText(page, block, new TextEditOptions(replacement, fontSize, Strict: true));
  public void ReplaceText(int page,OriginalTextBlock block,TextEditOptions options) {
   var before=Snapshot();
-  try {TextEditing.OriginalTextEditor.Replace(document,document.Pages[page-1],GetPageGeometry(page),block,options);}
+  try {
+   if(block.Id.StartsWith("v:")) {
+    ReplaceVectorText(page, block, options);
+   } else {
+    TextEditing.OriginalTextEditor.Replace(document,document.Pages[page-1],GetPageGeometry(page),block,options);
+   }
+  }
   catch {Restore(before);throw;}
+ }
+ void ReplaceVectorText(int page, OriginalTextBlock block, TextEditOptions options) {
+  var p = document.Pages[page - 1];
+  BlankOriginalTextInStreams(p, page, block);
+  var geometry = GetPageGeometry(page);
+  var currentGraphics = GetGraphics(page).ToList();
+  var pad = 1.0;
+  var maskX = Math.Max(0, block.Bounds.X - pad);
+  var maskY = Math.Max(0, block.Bounds.Y - pad);
+  var mask = new GraphicObject {
+   Kind = GraphicKind.Rectangle,
+   X = maskX,
+   Y = maskY,
+   Width = Math.Min(geometry.Width - maskX, block.Bounds.Width + pad * 2),
+   Height = Math.Min(geometry.Height - maskY, block.Bounds.Height + pad * 2),
+   Color = "#FFFFFF",
+   FillColor = "#FFFFFF",
+   StrokeWidth = 0
+  };
+  currentGraphics.Add(mask);
+
+  if(!string.IsNullOrEmpty(options.Text)) {
+   var textX = Math.Clamp(block.Bounds.X, 0, geometry.Width - 10);
+   var textY = Math.Clamp(block.Bounds.Y, 0, geometry.Height - 10);
+   var textObj = new GraphicObject {
+    Kind = GraphicKind.Text,
+    X = textX,
+    Y = textY,
+    Width = Math.Clamp(Math.Max(block.Bounds.Width, options.MaxWidth ?? 100), 4, geometry.Width - textX),
+    Height = Math.Clamp(Math.Max(block.Bounds.Height * 2, options.FontSize * 2), 4, geometry.Height - textY),
+    Text = options.Text,
+    FontSize = options.FontSize,
+    Color = string.IsNullOrWhiteSpace(options.Color) ? "#000000" : options.Color,
+    Bold = options.Bold,
+    Italic = options.Italic,
+    Alignment = options.Alignment,
+    FontFamily = string.IsNullOrWhiteSpace(options.FontFamily) ? "Liberation Sans" : options.FontFamily,
+    StrokeWidth = 0
+   };
+   currentGraphics.Add(textObj);
+  }
+  SetGraphics(page, currentGraphics);
+ }
+ void BlankOriginalTextInStreams(PdfPage page, int pageNumber, OriginalTextBlock block) {
+  var geom = GetPageGeometry(pageNumber);
+  for(var i = 0; i < page.Contents.Elements.Count; i++) {
+   var dict = page.Contents.Elements.GetDictionary(i);
+   if(dict is null || dict.Elements.GetBoolean("/MythlixGraphicsV1") || dict.Elements.GetBoolean("/MythlixOcrV1")) continue;
+   var bytes = dict.Stream?.UnfilteredValue;
+   if(bytes is null || bytes.Length == 0) continue;
+
+   try {
+    var tokens = TextEditing.ContentTokenizer.Read(bytes);
+    for(var s = 0; s < tokens.Count; s++) {
+     if(tokens[s].Value != "BT" || tokens[s].Bytes is not null) continue;
+     var e = s + 1;
+     while(e < tokens.Count && tokens[e].Value != "ET") e++;
+     if(e >= tokens.Count) break;
+
+     var innerTokens = tokens.Skip(s + 1).Take(e - s - 1).ToArray();
+     bool isMatch = false;
+
+     for(var k = 0; k < innerTokens.Length; k++) {
+      if(innerTokens[k].Bytes is null && innerTokens[k].Value is "Td" or "TD" or "Tm") {
+       if(k >= 2 && innerTokens[k-2].Number(out var tx) && innerTokens[k-1].Number(out var ty)) {
+        var topY = geom.Height - ty;
+        if(Math.Abs(tx - block.Bounds.X) < 20 && Math.Abs(topY - block.Bounds.Y) < 30) {
+         isMatch = true;
+         break;
+        }
+       }
+      }
+     }
+
+     if(!isMatch && !string.IsNullOrWhiteSpace(block.Text)) {
+      var sample = block.Text[..Math.Min(block.Text.Length, 8)];
+      if(innerTokens.Any(t => t.Bytes is not null && System.Text.Encoding.ASCII.GetString(t.Bytes).Contains(sample))) {
+       isMatch = true;
+      }
+     }
+
+     if(isMatch) {
+      var btStart = tokens[s].Start;
+      var etEnd = tokens[e].Start + tokens[e].Length;
+      var length = etEnd - btStart;
+
+      var blanked = bytes.ToArray();
+      var replacement = System.Text.Encoding.ASCII.GetBytes("BT () Tj ET");
+      for(var k = 0; k < length; k++) blanked[btStart + k] = (byte)' ';
+      for(var k = 0; k < replacement.Length && k < length; k++) blanked[btStart + k] = replacement[k];
+
+      var updated = new PdfDictionary(document);
+      foreach(var key in dict.Elements.Keys) if(key is not ("/Filter" or "/DecodeParms" or "/Length" or "/DL")) updated.Elements[key] = dict.Elements[key];
+      updated.CreateStream(blanked);
+      document.Internals.AddObject(updated);
+      page.Contents.Elements[i] = updated.Reference!;
+      break;
+     }
+     s = e;
+    }
+   } catch {}
+  }
  }
  public void ApplyHeaderFooter(HeaderFooterOptions options) {
   var before=Snapshot();
