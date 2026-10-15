@@ -3,7 +3,7 @@
 ## Estado y entregas
 
 - **2A, implementado:** compositor métrico WinAnsi independiente de la UI, métricas de recursos reales y propuestas de composición inmutables.
-- **2B, pendiente:** resolver la fuente física y sus índices/offsets de glifo, adaptador visual que consuma el plan sin recalcular los cortes y verificación visual.
+- **2B, en curso:** primer adaptador visual de glifos con fuente física explícita, sin recalcular cortes. Pendientes integración de vista previa y matriz visual de estilos mixtos.
 - **2C, pendiente:** escritor que consuma el mismo plan, confirmación transaccional, revalidación de revisión/huellas/recursos y colisiones. La numeración no implica activación automática de escritura al completar 2A.
 
 El motor y el editor existentes siguen funcionando. Esta entrega no añade botones, sustituye renderizado, habilita escritura mixta ni llama al compositor desde RenderAsync.
@@ -49,4 +49,14 @@ No se generan GID a partir de bytes PDF ni se afirma que Unicode, código WinAns
 
 `ParagraphCompositionTests` cubre mezcla de estilos, avances frente al extractor, alineaciones, justificación, Tw/Tc/Tz/Ts, palabras que atraviesan estilos, espacios y NBSP, CR/LF/CRLF y líneas vacías, desbordamientos, interlineado, fuentes/revisiones ajenas, codificación imposible y overflow numérico. La suite existente sigue protegiendo edición, historial, inspección y conservación del contenido.
 
-No se afirma validación visual de glifos ni escritura del nuevo plan: esas comprobaciones pertenecen a 2B/2C.
+La verificación métrica de 2A no prueba fidelidad de contornos ni escritura. El inicio de la validación visual de 2B se detalla a continuación; la escritura sigue en 2C.
+
+## Inicio de 2B — adaptador de vista previa
+
+`Mythlix.Desktop.TextEditing.PreviewFontBinding` carga bytes de un archivo físico mediante el backend de Avalonia, registra SHA-256 y asocia la cara únicamente a un `PdfFontReference` (documento, página, revisión, ámbito y recurso). La asociación es explícita: los recursos estándar no identifican por sí mismos los contornos originales. El llamador debe conservarla viva hasta liberar las vistas que la usan. No se busca una familia ni se hace fallback.
+
+`ParagraphGlyphPreview` consume los segmentos del plan válido: conserva cortes, propietarios y avances efectivos, incluidos los extras de justificación ya calculados. Obtiene GID desde el cmap de la cara física, nunca desde bytes PDF. En este alcance 1:1 los offsets de glifo son cero; Ts desplaza la línea base y Tz escala los contornos. Los avances se dividen por Tz antes del transform para evitar escalar dos veces. El color procede del estilo del segmento. Un recurso ausente/de otra revisión o un glifo ausente rechaza la vista completa y libera los GlyphRun parciales.
+
+La prueba `ParagraphGlyphPreviewTests` dibuja texto blanco con ñ sobre azul y comprueba asociación física, GID, avances con Tz y rechazo de recursos/composición inválida. Genera `/tmp/mythlix-phase2b-preview.png` como evidencia diagnóstica. Esta imagen inicial se inspecciona visualmente; no es una comparación de fidelidad contra el PDF original.
+
+2B permanece **en curso**: falta conectar una vista previa de solo lectura con selección explícita de fuentes, ampliar pruebas a composiciones reales de estilos mixtos, variantes, líneas, alineaciones y offsets, y comparar imágenes de referencia. No hay integración automática con RenderAsync, botones de edición mixta ni escritura. 2C sigue pendiente.
