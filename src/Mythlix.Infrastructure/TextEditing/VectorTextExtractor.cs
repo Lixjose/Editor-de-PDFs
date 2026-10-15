@@ -86,7 +86,10 @@ public static class VectorTextExtractor {
                     if(Math.Abs(next.Top - current.Top) <= 3 &&
                        next.Left >= current.Left + current.Width - 1 &&
                        next.Left <= current.Left + current.Width + current.Font.Size * 1.0 &&
-                       next.Font.Family.Equals(current.Font.Family, StringComparison.OrdinalIgnoreCase)) {
+                       next.Font.Family.Equals(current.Font.Family, StringComparison.OrdinalIgnoreCase) &&
+                       Math.Abs(next.Font.Size - current.Font.Size) < 0.05 &&
+                       next.Bold == current.Bold && next.Italic == current.Italic &&
+                       next.Font.Color.Equals(current.Font.Color, StringComparison.OrdinalIgnoreCase)) {
                         var sep = current.Text.EndsWith(' ') || next.Text.StartsWith(' ') ? "" : " ";
                         var combinedText = current.Text + sep + next.Text;
                         var newWidth = (next.Left + next.Width) - current.Left;
@@ -103,7 +106,7 @@ public static class VectorTextExtractor {
             var blocks = new List<OriginalTextBlock>();
             for(var i = 0; i < mergedLines.Count; i++) {
                 var item = mergedLines[i];
-                var fontSize = Math.Max(4, Math.Round(item.Font.Size, 1));
+                var fontSize = Math.Max(4, item.Font.Size);
                 var bounds = new ObjectBounds(item.Left, item.Top, Math.Max(item.Width, 8), Math.Max(item.Height, 8));
                 var fingerprint = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes($"{page}_{i}_{item.Text}_{item.Left}_{item.Top}")));
 
@@ -120,7 +123,8 @@ public static class VectorTextExtractor {
                     Italic: item.Italic,
                     Alignment: TextAlignment.Left,
                     LineCount: 1,
-                    Baseline: Math.Round(item.Top + item.Height * 0.78, 2)
+                    Baseline: Math.Round(item.Top + item.Height * 0.78, 2),
+                    HorizontalScale: TextFontMeasurement.Calibrate(item.Text, item.Font.Family, fontSize, item.Bold, item.Italic, item.Width)
                 ));
             }
 

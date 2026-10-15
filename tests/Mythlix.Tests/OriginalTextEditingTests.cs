@@ -180,5 +180,22 @@ public sealed class OriginalTextEditingTests:IDisposable {
   Assert.Equal(50, textObj.X);
   Assert.Equal("Fila alineada", textObj.Text);
  }
+ [Theory]
+ [InlineData("0 -18 Td (Second line remains) Tj")]
+ [InlineData("18 TL T* (Second line remains) Tj")]
+ [InlineData("18 TL (Second line remains) '\n")]
+ public async Task VectorLineEditPreservesOtherLinesInSameTextObject(string nextLine) {
+  Create("BT /F1 12 Tf 1 0 0 1 60 680 Tm (First line) Tj " + nextLine +
+   " 0 -18 Td [(Third line remains)] TJ ET");
+  using var doc = new PdfDocumentSession(Source);
+  var block = new OriginalTextBlock("v:1:0", "First line", "Liberation Sans", 12,
+   new ObjectBounds(60, 102, 90, 14), "fp", Baseline: 112);
+  doc.ReplaceText(1, block, new TextEditOptions("Edited line", 12));
+  await doc.SaveCopyAsync(Output);
+  var text = await new PopplerRenderer().ExtractTextAsync(Output, 1, CancellationToken.None);
+  Assert.Contains(doc.GetGraphics(1), g => g.Kind == GraphicKind.Text && g.Text == "Edited line");
+  Assert.Contains("Second line remains", text);
+  Assert.Contains("Third line remains", text);
+ }
  public void Dispose()=>Directory.Delete(directory,true);
 }

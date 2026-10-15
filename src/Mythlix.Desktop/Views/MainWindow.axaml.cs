@@ -379,21 +379,8 @@ public partial class MainWindow : Window {
   DirectEditor.RenderTransformOrigin=new RelativePoint(0,0,RelativeUnit.Relative);
   DirectEditor.RenderTransform=new ScaleTransform(block.HorizontalScale,1);
 
-  var fontName = block.FontName ?? "Liberation Sans";
-  if(fontName.Contains("Times", StringComparison.OrdinalIgnoreCase) ||
-     fontName.Contains("Roman", StringComparison.OrdinalIgnoreCase) ||
-     fontName.Contains("Serif", StringComparison.OrdinalIgnoreCase) ||
-     fontName.Contains("Minion", StringComparison.OrdinalIgnoreCase) ||
-     fontName.Contains("Garamond", StringComparison.OrdinalIgnoreCase)) {
-   try { DirectEditor.FontFamily = new FontFamily("Liberation Serif, Times New Roman, serif"); } catch {}
-  } else if(fontName.Contains("Courier", StringComparison.OrdinalIgnoreCase) ||
-            fontName.Contains("Mono", StringComparison.OrdinalIgnoreCase)) {
-   try { DirectEditor.FontFamily = new FontFamily("Liberation Mono, Courier New, monospace"); } catch {}
-  } else if(fontName.Contains("Montserrat", StringComparison.OrdinalIgnoreCase)) {
-   try { DirectEditor.FontFamily = new FontFamily("Montserrat, sans-serif"); } catch {}
-  } else {
-   try { DirectEditor.FontFamily = new FontFamily("Liberation Sans, Arial, sans-serif"); } catch {}
-  }
+  var fontName = Mythlix.Infrastructure.TextEditing.TextFontMeasurement.Family(block.FontName);
+  DirectEditor.FontFamily = new FontFamily($"{fontName}, Liberation Sans, Arial, sans-serif");
 
   DirectEditor.FontWeight = block.Bold ? Avalonia.Media.FontWeight.Bold : Avalonia.Media.FontWeight.Normal;
   DirectEditor.FontStyle = block.Italic ? Avalonia.Media.FontStyle.Italic : Avalonia.Media.FontStyle.Normal;
@@ -429,14 +416,10 @@ public partial class MainWindow : Window {
   var scale = PdfCanvas.Bounds.Width / Math.Max(1, vm.Geometry.DisplayWidth);
   DirectEditor.TextWrapping = obj.Text.Contains('\n') ? Avalonia.Media.TextWrapping.Wrap : Avalonia.Media.TextWrapping.NoWrap;
 
-  var fontName = string.IsNullOrWhiteSpace(obj.FontFamily) ? "Liberation Sans" : obj.FontFamily;
-  if(fontName.Contains("Times", StringComparison.OrdinalIgnoreCase) ||
-     fontName.Contains("Roman", StringComparison.OrdinalIgnoreCase) ||
-     fontName.Contains("Serif", StringComparison.OrdinalIgnoreCase)) {
-   try { DirectEditor.FontFamily = new FontFamily("Times New Roman, Liberation Serif, DejaVu Serif, FreeSerif, serif"); } catch {}
-  } else {
-   try { DirectEditor.FontFamily = new FontFamily($"{fontName}, Liberation Sans, Arial, DejaVu Sans, sans-serif"); } catch {}
-  }
+  var fontName = Mythlix.Infrastructure.TextEditing.TextFontMeasurement.Family(obj.FontFamily);
+  DirectEditor.FontFamily = new FontFamily($"{fontName}, Liberation Sans, Arial, sans-serif");
+  DirectEditor.RenderTransform = new ScaleTransform(obj.HorizontalScale, 1);
+  DirectEditor.RenderTransformOrigin = new RelativePoint(0, 0, RelativeUnit.Relative);
 
   DirectEditor.FontWeight = obj.Bold ? Avalonia.Media.FontWeight.Bold : Avalonia.Media.FontWeight.Normal;
   DirectEditor.FontStyle = obj.Italic ? Avalonia.Media.FontStyle.Italic : Avalonia.Media.FontStyle.Normal;
@@ -471,13 +454,13 @@ public partial class MainWindow : Window {
   editorBaseline=baseline ?? rect.Y+measured.Baseline;
   Canvas.SetLeft(DirectEditor,rect.X);
   Canvas.SetTop(DirectEditor,editorBaseline-measured.Baseline);
-  DirectEditor.Width=DirectEditor.TextWrapping==Avalonia.Media.TextWrapping.Wrap?editorBox.Width:Math.Max(editorBox.Width,measured.WidthIncludingTrailingWhitespace)+4;
+  DirectEditor.Width=editorBox.Width;
   DirectEditor.Height=Math.Max(rect.Height,measured.Height);
  }
 
  void GrowEditorToText() {
   using var measured=MeasureEditorText(DirectEditor.Text ?? "");
-  DirectEditor.Width=DirectEditor.TextWrapping==Avalonia.Media.TextWrapping.Wrap?editorBox.Width:Math.Max(editorBox.Width,measured.WidthIncludingTrailingWhitespace)+4;
+  DirectEditor.Width=editorBox.Width;
   DirectEditor.Height=Math.Max(editorBox.Height,measured.Height);
   Canvas.SetTop(DirectEditor,editorBaseline-measured.Baseline);
  }
@@ -530,11 +513,26 @@ public partial class MainWindow : Window {
        vm.ActiveEditingOriginal=targetOrig;DirectEditor.IsVisible=true;DirectEditor.Focus();
       }
      }
-     else await vm.CommitOriginalTextDirectAsync(targetOrig, newText, targetOrig.FontName, targetOrig.FontSize, null, targetOrig.Bold, targetOrig.Italic, targetOrig.Bounds.X, targetOrig.EffectiveBaseline);
+     else {
+      var revision = vm.Selected?.Revision;
+      await vm.CommitOriginalTextDirectAsync(targetOrig, newText, targetOrig.FontName, targetOrig.FontSize, null, targetOrig.Bold, targetOrig.Italic, targetOrig.Bounds.X, targetOrig.EffectiveBaseline);
+      if(vm.Selected?.Revision == revision) {
+       activeEditingOriginal = targetOrig;
+       vm.ActiveEditingOriginal = targetOrig;
+       DirectEditor.IsVisible = true;
+       DirectEditor.Focus();
+      }
+     }
     }
    } else if(targetGraph is not null) {
     if(newText != targetGraph.Text) {
+     var revision = vm.Selected?.Revision;
      await vm.CommitGraphicTextDirectAsync(targetGraph, newText, targetGraph.FontSize, null, targetGraph.Bold, targetGraph.Italic);
+     if(vm.Selected?.Revision == revision) {
+      activeEditingGraphic = targetGraph;
+      DirectEditor.IsVisible = true;
+      DirectEditor.Focus();
+     }
     }
    }
   } finally {

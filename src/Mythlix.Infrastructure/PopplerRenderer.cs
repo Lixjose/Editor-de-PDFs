@@ -24,5 +24,5 @@ public sealed class PopplerRenderer : IPdfRenderer {
  public Task<byte[]> RenderOcrAsync(string path,int page,int size,CancellationToken token)=>Run("pdftoppm",["-f",page.ToString(),"-l",page.ToString(),"-singlefile","-r","300","-png",path],token);
  public async Task<string> ExtractTextAsync(string path,int page,CancellationToken token) => System.Text.Encoding.UTF8.GetString(await Run("pdftotext",["-f",page.ToString(),"-l",page.ToString(),"-layout",path,"-"],token));
  public async Task<string> ExtractTsvAsync(string path,int page,CancellationToken token) => System.Text.Encoding.UTF8.GetString(await Run("pdftotext",["-f",page.ToString(),"-l",page.ToString(),"-tsv",path,"-"],token));
- public async Task<string> ExtractXmlAsync(string path,int page,CancellationToken token) => System.Text.Encoding.UTF8.GetString(await Run("pdftohtml",["-xml","-zoom","1.0","-i","-fontfullname","-nodrm","-f",page.ToString(),"-l",page.ToString(),"-stdout",path],token));
+ public async Task<string> ExtractXmlAsync(string path,int page,CancellationToken token) => System.Text.Encoding.UTF8.GetString(await Run("pdftohtml",["-xml","-nomerge","-noroundcoord","-zoom","1.0","-i","-fontfullname","-nodrm","-f",page.ToString(),"-l",page.ToString(),"-stdout",path],token));
 }

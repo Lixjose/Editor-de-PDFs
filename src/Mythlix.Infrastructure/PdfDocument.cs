@@ -161,7 +161,7 @@ public sealed class PdfDocumentSession : IPdfDocument, IContentEditor, ISearchab
     Kind = GraphicKind.Text,
     X = textX,
     Y = textY,
-    Width = Math.Clamp(Math.Max(block.Bounds.Width, options.MaxWidth ?? 10), 4, geometry.Width - textX),
+    Width = Math.Clamp(options.MaxWidth ?? block.Bounds.Width, 4, geometry.Width - textX),
     Height = Math.Clamp(Math.Max(block.Bounds.Height, options.FontSize), 4, geometry.Height - textY),
     Text = options.Text,
     FontSize = options.FontSize,
@@ -171,6 +171,8 @@ public sealed class PdfDocumentSession : IPdfDocument, IContentEditor, ISearchab
     Alignment = options.Alignment,
     FontFamily = string.IsNullOrWhiteSpace(options.FontFamily) || options.FontFamily == "Conservar fuente" ? block.FontName : options.FontFamily,
     Baseline = baselineOffset,
+    HorizontalScale = block.HorizontalScale,
+    ConstrainTextWidth = true,
     StrokeWidth = 0
    };
    currentGraphics.Add(textObj);
@@ -194,6 +196,12 @@ public sealed class PdfDocumentSession : IPdfDocument, IContentEditor, ISearchab
      if(e >= tokens.Count) break;
 
      var innerTokens = tokens.Skip(s + 1).Take(e - s - 1).ToArray();
+     // A text object can contain an entire paragraph. Removing BT..ET in
+     // that case also deletes every neighbouring line. Keep its operators
+     // intact and let the local mask in ReplaceVectorText cover the edit.
+     // This also preserves relative positioning and inherited text state.
+     var showCount = innerTokens.Count(t => t.Bytes is null && t.Value is "Tj" or "TJ" or "\"" or "'");
+     if(showCount != 1) { s = e; continue; }
      bool isMatch = false;
 
      for(var k = 0; k < innerTokens.Length; k++) {

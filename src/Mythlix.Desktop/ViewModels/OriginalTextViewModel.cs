@@ -191,7 +191,8 @@ public sealed partial class WorkspaceViewModel {
    FontFamily: string.IsNullOrWhiteSpace(fontFamily) || fontFamily == "Conservar fuente" ? block.FontName : fontFamily,
    Strict: false,
    X: x ?? block.Bounds.X,
-   Baseline: baseline ?? block.EffectiveBaseline
+   Baseline: baseline ?? block.EffectiveBaseline,
+   MaxWidth: block.LayoutWidth ?? block.Bounds.Width
   );
   await Task.Run(() => {
    var before = doc.Document.Snapshot();

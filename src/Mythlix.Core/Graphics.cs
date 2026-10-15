@@ -22,6 +22,9 @@ public sealed record GraphicObject {
  public string FontFamily { get; init; } = "Liberation Sans";
  /// <summary>Distance from <see cref="Y"/> to the first text baseline. When set, text is drawn on exact baselines.</summary>
  public double? Baseline { get; init; }
+ public double HorizontalScale { get; init; } = 1;
+ /// <summary>Original line edits must stay inside their reserved width.</summary>
+ public bool ConstrainTextWidth { get; init; }
  public string Label => Kind switch {
   GraphicKind.Text => string.IsNullOrWhiteSpace(Text) ? "Texto" : Text[..Math.Min(Text.Length, 28)],
   GraphicKind.Image => "Imagen", GraphicKind.Rectangle => "Rectángulo",
@@ -30,9 +33,10 @@ public sealed record GraphicObject {
  public void Validate(PageGeometry page) {
   if(!Enum.IsDefined(Kind) || !Enum.IsDefined(Alignment) || Id == Guid.Empty || Text is null || Color is null || FontFamily is null)
    throw new InvalidOperationException("El objeto contiene propiedades inválidas.");
-  var numbers = new[] { X, Y, Width, Height, FontSize, StrokeWidth };
+  var numbers = new[] { X, Y, Width, Height, FontSize, StrokeWidth, HorizontalScale };
   if(numbers.Any(v => !double.IsFinite(v)) || X < 0 || Y < 0 || Width < 4 || Height < 4 || X + Width > page.Width + .01 || Y + Height > page.Height + .01)
    throw new InvalidOperationException("El objeto debe quedar dentro de la página, con dimensiones de al menos 4 pt.");
+  if(HorizontalScale is <= 0 or > 10) throw new InvalidOperationException("Escala horizontal inválida.");
   if(FontSize is < 4 or > 144 || StrokeWidth is < 0 or > 20)
    throw new InvalidOperationException("Tamaño de fuente: 4–144 pt. Trazo: 0–20 pt.");
   if(Color.Length != 7 || Color[0] != '#' || !uint.TryParse(Color.AsSpan(1), System.Globalization.NumberStyles.HexNumber, null, out _))

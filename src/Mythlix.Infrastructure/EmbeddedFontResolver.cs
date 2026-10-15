@@ -24,14 +24,11 @@ internal sealed class EmbeddedFontResolver : IFontResolver {
         cleaned = cleaned.Trim();
 
         if(cleaned.Contains("Times", StringComparison.OrdinalIgnoreCase) ||
-           cleaned.Contains("Roman", StringComparison.OrdinalIgnoreCase) ||
-           cleaned.Contains("Minion", StringComparison.OrdinalIgnoreCase) ||
-           cleaned.Contains("Garamond", StringComparison.OrdinalIgnoreCase) ||
-           cleaned.Contains("Serif", StringComparison.OrdinalIgnoreCase)) {
+           cleaned.Replace(" ", "").Equals("LiberationSerif", StringComparison.OrdinalIgnoreCase)) {
             return "Liberation Serif";
         }
         if(cleaned.Contains("Courier", StringComparison.OrdinalIgnoreCase) ||
-           cleaned.Contains("Mono", StringComparison.OrdinalIgnoreCase)) {
+           cleaned.Replace(" ", "").Equals("LiberationMono", StringComparison.OrdinalIgnoreCase)) {
             return "Liberation Mono";
         }
         if(cleaned.Contains("Montserrat", StringComparison.OrdinalIgnoreCase)) {
@@ -39,7 +36,7 @@ internal sealed class EmbeddedFontResolver : IFontResolver {
         }
         if(cleaned.Contains("Arial", StringComparison.OrdinalIgnoreCase) ||
            cleaned.Contains("Helvetica", StringComparison.OrdinalIgnoreCase) ||
-           cleaned.Contains("Sans", StringComparison.OrdinalIgnoreCase)) {
+           cleaned.Replace(" ", "").Equals("LiberationSans", StringComparison.OrdinalIgnoreCase)) {
             return "Liberation Sans";
         }
 

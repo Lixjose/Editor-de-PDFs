@@ -350,7 +350,7 @@ internal static class OriginalTextEditor {
         var targetWidths = targetMetrics.Widths.Select(w => (double)w).ToArray();
         var fontRes = FontSubstitutionService.EnsureFontResource(page, document, targetBaseFont);
 
-        double maxWidth = options.MaxWidth ?? candidate.Block.LayoutWidth ?? Math.Max(candidate.Block.Bounds.Width, 100);
+        double maxWidth = options.MaxWidth ?? candidate.Block.LayoutWidth ?? Math.Max(candidate.Block.Bounds.Width, 4);
         var characterSpacing=candidate.Block.CharacterSpacing;
         var horizontalScale=candidate.Block.HorizontalScale;
         var lines = ParagraphReflow.Reflow(options.Text, options.FontSize, targetWidths, WindowsEncoding, maxWidth/horizontalScale, options.Alignment, characterSpacing, candidate.Block.WordSpacing);

@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Mythlix.Core;
+using Mythlix.Infrastructure.TextEditing;
 using PdfSharp.Drawing;
 using PdfSharp.Drawing.Layout;
 using PdfSharp.Pdf;
@@ -86,6 +87,14 @@ internal static class GraphicLayerWriter {
     var style = (item.Bold ? XFontStyleEx.Bold : XFontStyleEx.Regular) | (item.Italic ? XFontStyleEx.Italic : XFontStyleEx.Regular);
     var family = string.IsNullOrWhiteSpace(item.FontFamily) ? "Liberation Sans" : item.FontFamily;
     var font=new XFont(family,item.FontSize,style,new XPdfFontOptions(PdfFontEncoding.Unicode));
+    if(item.ConstrainTextWidth && (item.Text.Contains('\n') ||
+      TextFontMeasurement.Width(item.Text, family, item.FontSize, item.Bold, item.Italic) * item.HorizontalScale > item.Width + 0.5))
+     throw new InvalidOperationException("El texto excede el ancho original. Acórtelo o reduzca el tamaño en el panel de texto; esta línea no admite reflujo seguro.");
+    var saved = graphics.Save();
+    graphics.TranslateTransform(item.X, 0);
+    graphics.ScaleTransform(item.HorizontalScale, 1);
+    graphics.TranslateTransform(-item.X, 0);
+    var textWidth = item.Width / item.HorizontalScale;
     var xAlign = item.Alignment switch {
      TextAlignment.Center => XStringFormats.TopCenter,
      TextAlignment.Right => XStringFormats.TopRight,
@@ -99,23 +108,24 @@ internal static class GraphicLayerWriter {
        _ => new XStringFormat { Alignment = XStringAlignment.Near, LineAlignment = XLineAlignment.BaseLine }
       };
       var anchorX = item.Alignment switch {
-       TextAlignment.Center => item.X + item.Width / 2,
-       TextAlignment.Right => item.X + item.Width,
+       TextAlignment.Center => item.X + textWidth / 2,
+       TextAlignment.Right => item.X + textWidth,
        _ => item.X
       };
       graphics.DrawString(item.Text, font, new XSolidBrush(color), new XPoint(anchorX, item.Y + item.Baseline.Value), format);
      } else {
-      var drawRect = new XRect(item.X, item.Y, Math.Max(item.Width, 10), Math.Max(item.Height, item.FontSize));
+      var drawRect = new XRect(item.X, item.Y, Math.Max(textWidth, 10), Math.Max(item.Height, item.FontSize));
       graphics.DrawString(item.Text, font, new XSolidBrush(color), drawRect, xAlign);
      }
     } else {
      var lines = item.Text.Split('\n');
      var lineH = item.Height / Math.Max(1, lines.Length);
      for(var li = 0; li < lines.Length; li++) {
-      var drawRect = new XRect(item.X, item.Y + li * lineH, item.Width, lineH);
+      var drawRect = new XRect(item.X, item.Y + li * lineH, textWidth, lineH);
       graphics.DrawString(lines[li], font, new XSolidBrush(color), drawRect, xAlign);
      }
     }
+    graphics.Restore(saved);
     break;
    case GraphicKind.Image:
     using(var memory=new MemoryStream(item.ImageData!,0,item.ImageData!.Length,false,true))
