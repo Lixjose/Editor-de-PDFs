@@ -20,7 +20,11 @@ public interface IPdfRenderer {
  Task<byte[]> RenderAsync(string path, int page, int width, CancellationToken token);
  Task<string> ExtractTextAsync(string path, int page, CancellationToken token);
 }
-public interface IContentEditor { TextAnalysis AnalyzeText(int page); void ReplaceText(int page, OriginalTextBlock block, string replacement, double fontSize); }
+public interface IContentEditor {
+ TextAnalysis AnalyzeText(int page);
+ void ReplaceText(int page, OriginalTextBlock block, string replacement, double fontSize);
+ void ReplaceText(int page, OriginalTextBlock block, TextEditOptions options);
+}
 public interface IOcrEngine {
  Task<IReadOnlyList<string>> LanguagesAsync(CancellationToken token);
  Task<OcrPageResult> RecognizeAsync(byte[] image, string language, CancellationToken token);

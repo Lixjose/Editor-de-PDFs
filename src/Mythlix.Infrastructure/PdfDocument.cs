@@ -37,9 +37,11 @@ public sealed class PdfDocumentSession : IPdfDocument, IContentEditor, ISearchab
   catch{Restore(before);throw;}
  }
  public TextAnalysis AnalyzeText(int page) => TextEditing.OriginalTextEditor.Analyze(document.Pages[page-1],GetPageGeometry(page));
- public void ReplaceText(int page,OriginalTextBlock block,string replacement,double fontSize) {
+ public void ReplaceText(int page,OriginalTextBlock block,string replacement,double fontSize) =>
+  ReplaceText(page, block, new TextEditOptions(replacement, fontSize, Strict: true));
+ public void ReplaceText(int page,OriginalTextBlock block,TextEditOptions options) {
   var before=Snapshot();
-  try {TextEditing.OriginalTextEditor.Replace(document,document.Pages[page-1],GetPageGeometry(page),block,replacement,fontSize);}
+  try {TextEditing.OriginalTextEditor.Replace(document,document.Pages[page-1],GetPageGeometry(page),block,options);}
   catch {Restore(before);throw;}
  }
  public byte[] Snapshot() {

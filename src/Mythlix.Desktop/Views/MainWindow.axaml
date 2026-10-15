@@ -84,12 +84,15 @@
       <ListBox ItemsSource="{Binding OriginalBlocks}" SelectedItem="{Binding SelectedOriginal, Mode=TwoWay}" MaxHeight="115" IsEnabled="{Binding !Busy}"><ListBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Label}" FontSize="12" TextTrimming="CharacterEllipsis"/></DataTemplate></ListBox.ItemTemplate></ListBox>
       <StackPanel IsVisible="{Binding HasOriginal}" Spacing="8" IsEnabled="{Binding !Busy}">
        <TextBlock Text="TIPOGRAFÍA ORIGINAL" Classes="caption"/><Border Background="#24262B" Padding="9" CornerRadius="3"><TextBlock Text="{Binding OriginalFontLabel}"/></Border>
-       <TextBox Text="{Binding OriginalDraftText, Mode=TwoWay}" TextWrapping="Wrap" MinHeight="75" MaxHeight="150"/>
+       <TextBox Text="{Binding OriginalDraftText, Mode=TwoWay}" TextWrapping="Wrap" AcceptsReturn="True" MinHeight="75" MaxHeight="150"/>
        <TextBlock Text="TAMAÑO · pt" Classes="caption"/><NumericUpDown IsEnabled="{Binding SelectedOriginal.CanChangeFontSize}" ToolTip.Tip="El tamaño se bloquea si puede afectar a texto que hereda la fuente." Value="{Binding OriginalDraftSize, Mode=TwoWay}" Minimum="4" Maximum="144" FormatString="0.##"/>
+       <StackPanel Orientation="Horizontal" Spacing="12"><CheckBox Content="Negrita" IsChecked="{Binding OriginalDraftBold, Mode=TwoWay}"/><CheckBox Content="Cursiva" IsChecked="{Binding OriginalDraftItalic, Mode=TwoWay}"/></StackPanel>
+       <TextBlock Text="COLOR · #RRGGBB" Classes="caption"/><TextBox Text="{Binding OriginalDraftColor, Mode=TwoWay}"/>
+       <TextBlock Text="ALINEACIÓN" Classes="caption"/><ComboBox SelectedIndex="{Binding OriginalDraftAlignmentIndex, Mode=TwoWay}" HorizontalAlignment="Stretch"><ComboBoxItem>Izquierda</ComboBoxItem><ComboBoxItem>Centro</ComboBoxItem><ComboBoxItem>Derecha</ComboBoxItem></ComboBox>
        <TextBlock Text="{Binding OriginalGeometryLabel}" Foreground="#7BD0FF" FontSize="11" TextWrapping="Wrap"/>
        <Button Content="Aplicar al texto original" Command="{Binding ApplyOriginalCommand}" Classes="primary" HorizontalAlignment="Stretch"/>
        <Button Content="Eliminar texto original" Command="{Binding DeleteOriginalCommand}" HorizontalAlignment="Stretch"/>
-       <TextBlock Text="Reemplaza el operador original. El texto debe caber en su ancho y usar glifos disponibles." Classes="caption" TextWrapping="Wrap"/>
+       <TextBlock Text="Reflujo de párrafo automático. Respeta o sustituye la fuente con criterio y adapta la distribución." Classes="caption" TextWrapping="Wrap"/>
       </StackPanel>
      </StackPanel></Border>
      <Border Classes="section"><StackPanel Spacing="8"><TextBlock Text="CONTENIDO AÑADIDO" Classes="caption"/>

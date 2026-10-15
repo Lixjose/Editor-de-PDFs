@@ -19,6 +19,7 @@
 - Fase 3 inicial: análisis y reemplazo auténtico de cadenas originales Tj/TJ simples con fuentes estándar Type 1 y codificación compatible.
 - Conservación de posición y fuente, reducción de tamaño segura, validación de ancho y selección obsoleta.
 - Interfaz renovada según los últimos adjuntos: menús funcionales, herramientas compactas, miniaturas cercanas reales, resaltado activo, inspector contextual y ajuste de página completa.
+- Fase 1 (Motor de texto): reflujo de párrafos con ajuste de líneas automático y saltos explícitos (\n), sustitución criteriosa de fuentes estándar y registro de recursos tipográficos (/Font), cambio de tamaño (4-144 pt), color (#RRGGBB con operador rg), negrita, cursiva y alineación (izquierda, centro, derecha) en texto original y cuadros nuevos.
 
 - Fase 4: OCR local Tesseract español/inglés, páginas y documentos completos, progreso y cancelación.
 - Revisión y corrección de palabras con confianza y avisos inferiores al 70%, exportación de texto UTF-8 con saltos de línea.

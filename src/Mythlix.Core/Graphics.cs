@@ -17,13 +17,15 @@ public sealed record GraphicObject {
  public string Color { get; init; } = "#4F46E5";
  public double StrokeWidth { get; init; } = 2;
  public byte[]? ImageData { get; init; }
+ public TextAlignment Alignment { get; init; } = TextAlignment.Left;
+ public string FontFamily { get; init; } = "Liberation Sans";
  public string Label => Kind switch {
   GraphicKind.Text => string.IsNullOrWhiteSpace(Text) ? "Texto" : Text[..Math.Min(Text.Length, 28)],
   GraphicKind.Image => "Imagen", GraphicKind.Rectangle => "Rectángulo",
   GraphicKind.Ellipse => "Elipse", _ => "Línea"
  };
  public void Validate(PageGeometry page) {
-  if(!Enum.IsDefined(Kind) || Id == Guid.Empty || Text is null || Color is null)
+  if(!Enum.IsDefined(Kind) || !Enum.IsDefined(Alignment) || Id == Guid.Empty || Text is null || Color is null || FontFamily is null)
    throw new InvalidOperationException("El objeto contiene propiedades inválidas.");
   var numbers = new[] { X, Y, Width, Height, FontSize, StrokeWidth };
   if(numbers.Any(v => !double.IsFinite(v)) || X < 0 || Y < 0 || Width < 4 || Height < 4 || X + Width > page.Width + .01 || Y + Height > page.Height + .01)

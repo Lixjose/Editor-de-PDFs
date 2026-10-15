@@ -84,9 +84,18 @@ internal static class GraphicLayerWriter {
   switch(item.Kind) {
    case GraphicKind.Text:
     var style = (item.Bold ? XFontStyleEx.Bold : XFontStyleEx.Regular) | (item.Italic ? XFontStyleEx.Italic : XFontStyleEx.Regular);
-    var font=new XFont("Liberation Sans",item.FontSize,style,new XPdfFontOptions(PdfFontEncoding.Unicode));
+    var family = string.IsNullOrWhiteSpace(item.FontFamily) ? "Liberation Sans" : item.FontFamily;
+    var font=new XFont(family,item.FontSize,style,new XPdfFontOptions(PdfFontEncoding.Unicode));
     var state=graphics.Save(); graphics.IntersectClip(rectangle);
-    new XTextFormatter(graphics).DrawString(item.Text,font,new XSolidBrush(color),rectangle,XStringFormats.TopLeft);
+    var formatter = new XTextFormatter(graphics) {
+     Alignment = item.Alignment switch {
+      TextAlignment.Center => XParagraphAlignment.Center,
+      TextAlignment.Right => XParagraphAlignment.Right,
+      TextAlignment.Justify => XParagraphAlignment.Justify,
+      _ => XParagraphAlignment.Left
+     }
+    };
+    formatter.DrawString(item.Text,font,new XSolidBrush(color),rectangle,XStringFormats.TopLeft);
     graphics.Restore(state); break;
    case GraphicKind.Image:
     using(var memory=new MemoryStream(item.ImageData!,0,item.ImageData!.Length,false,true))
