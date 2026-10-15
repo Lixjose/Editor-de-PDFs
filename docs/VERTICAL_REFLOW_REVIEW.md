@@ -8,7 +8,7 @@ La selección de bloques inferiores usa coordenadas desde arriba: `fila.Y >= pá
 
 El desplazamiento cambia directamente el operando Y de Tm/Td/TD, sin regenerar las palabras, fuente, color, arrays o espaciados de las filas desplazadas. Se valida todo antes de escribir y se restaura la página ante errores. El reemplazo y todos los desplazamientos forman una sola operación de deshacer.
 
-Se bloquea con mensaje de desbordamiento si hay texto nativo no compatible, geometría no editable, rotación, gráficos añadidos, operadores de trazados/imágenes/sombreado, colisiones con filas fijas o invasión del margen inferior de 36 pt. Por prudencia la inspección de operadores gráficos cubre toda la página: no se atribuyen posiciones fiables a imágenes o trazados sin interpretar su CTM. Esto puede bloquear páginas cuyos gráficos están lejos del párrafo; es más conservador que la inspección espacial propuesta. Poppler en este proyecto extrae texto, no un inventario espacial completo de trazados.
+Se bloquea con mensaje de desbordamiento si hay texto nativo no compatible, geometría no editable, rotación, gráficos añadidos, operadores de trazados/imágenes/sombreado, colisiones con filas fijas o invasión del margen inferior de 36 pt. La inspección espacial se refinó para caminos rectos y rectángulos sin transformaciones, y objetos Mythlix con límites conocidos; los restantes gráficos siguen bloqueando la operación. Véase SPATIAL_GUARD_REVIEW.md. Poppler en este proyecto extrae texto, no un inventario espacial completo de trazados.
 
 Si se bloquea una edición directa, el editor conserva el texto escrito para corregirlo. No se generan páginas nuevas ni se modifica una columna lateral para acomodar el desbordamiento.
 
@@ -20,7 +20,7 @@ Se admite la señal explícita `Tw > 0.05` en la primera línea y la coincidenci
 
 Se copia el bitmap ya renderizado a un buffer BGRA conocido y se muestrea un anillo exterior de dos píxeles. Se usa la moda cuando al menos 95% de las muestras están a seis niveles RGB o menos y todas son opacas. El color se comparte entre máscara y TextBox. Es un trabajo lineal pequeño sobre el bitmap, no literalmente un coste cero ni una garantía de cubrir 95% de los documentos.
 
-Si no se identifica un fondo uniforme se mantiene la selección y se informa que debe editarse desde el panel. No se abre una caja con una máscara blanca sobre degradados o imágenes. No se aplica el inpainting propuesto: puede confundir dibujos, caracteres claros y marcas de agua con glifos y fabricar un fondo falso. El muestreo es aproximado y no certifica que el interior completo esté libre de dibujos.
+Si no se identifica un fondo uniforme se mantiene la selección y se informa que debe editarse desde el panel. No se abre una caja con una máscara blanca sobre degradados o imágenes. No se aplica el inpainting propuesto: puede confundir dibujos, caracteres claros y marcas de agua con glifos y fabricar un fondo falso. El muestreo se complementa con una comprobación interior contra el segmento RGB fondo–texto; ambas pruebas son aproximadas. Véase SPATIAL_GUARD_REVIEW.md.
 
 ## Espaciado Tw
 

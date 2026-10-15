@@ -345,6 +345,64 @@ public sealed class TextReflowEngineTests : IDisposable {
         Assert.Null(BackgroundColorSampler.UniformColor([cream]));
     }
 
+    [Theory]
+    [InlineData("q 0.5 w 50 760 m 300 760 l S Q",true)]
+    [InlineData("q 450 500 30 20 re f Q",true)]
+    [InlineData("q 50 300 100 40 re S Q",false)]
+    [InlineData("q 30 w 50 730 m 300 730 l S Q",false)]
+    [InlineData("q /Unknown Do Q",false)]
+    public void DistantSimpleGraphicsPermitReflowButCorridorAndUnknownGraphicsBlock(string graphic,bool allowed) {
+        CreateSamplePdf(graphic+"\nBT /F1 14 Tf 1 0 0 1 50 700 Tm (Una primera linea) Tj ET\nBT /F1 14 Tf 1 0 0 1 50 682.5 Tm (Segunda linea) Tj ET");
+        using var doc=new PdfDocumentSession(Source);
+        var rows=doc.AnalyzeText(1).Blocks;
+        var paragraph=PdfParagraph.Around(rows[0],rows);
+        var edit=new TextEditOptions("Uno dos\nTres cuatro\nCinco seis",14);
+        if(allowed) {doc.ReplaceParagraph(1,paragraph,edit);Assert.Contains(doc.AnalyzeText(1).Blocks,b=>b.Text=="Cinco seis");}
+        else {Assert.Throws<InvalidOperationException>(()=>doc.ReplaceParagraph(1,paragraph,edit));Assert.Equal(rows.Select(b=>b.Text),doc.AnalyzeText(1).Blocks.Select(b=>b.Text));}
+    }
+
+    [Fact]
+    public void InteriorColorCheckAcceptsAntialiasingAndRejectsColoredWatermark() {
+        var grayscale=Enumerable.Range(0,256).Select(i=>0xFF000000u+(uint)i*0x010101u).ToArray();
+        Assert.True(BackgroundColorSampler.InteriorMatches(grayscale,0xFFFFFFFF,0xFF000000));
+        Assert.False(BackgroundColorSampler.InteriorMatches(grayscale.Concat(Enumerable.Repeat(0xFFFF0000u,20)),0xFFFFFFFF,0xFF000000));
+        Assert.False(BackgroundColorSampler.InteriorMatches([0x00FFFFFF],0xFFFFFFFF,0xFF000000));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task LayoutMetadataSurvivesCompressionButRejectsExternalChanges(bool changePosition) {
+        using(var doc=new PdfDocumentSession(Source)) {
+            var row=doc.AnalyzeText(1).Blocks[0];
+            doc.ReplaceText(1,row,new TextEditOptions("Otro texto",14,MaxWidth:240,LineHeight:18));
+            await doc.SaveCopyAsync(Output);
+        }
+        var compressed=Path.Combine(directory,"compressed.pdf");
+        using(var pdf=PdfReader.Open(Output,PdfDocumentOpenMode.Modify)) {
+            var page=pdf.Pages[0];var raw=page.Contents.Elements.GetDictionary(0)!.Stream!.UnfilteredValue;
+            using var buffer=new MemoryStream();
+            using(var zlib=new System.IO.Compression.ZLibStream(buffer,System.IO.Compression.CompressionLevel.Optimal,true))zlib.Write(raw);
+            var stream=new PdfDictionary(pdf);stream.CreateStream(buffer.ToArray());stream.Elements.SetName("/Filter","/FlateDecode");
+            pdf.Internals.AddObject(stream);page.Contents.Elements[0]=stream.Reference!;pdf.Save(compressed);
+        }
+        using(var reopened=new PdfDocumentSession(compressed)) {
+            var row=Assert.Single(reopened.AnalyzeText(1).Blocks);
+            Assert.Equal(240,row.LayoutWidth);Assert.Equal(18,row.LayoutLineHeight);
+        }
+        var changed=Path.Combine(directory,"external.pdf");
+        using(var pdf=PdfReader.Open(compressed,PdfDocumentOpenMode.Modify)) {
+            pdf.Options.CompressContentStreams=true;
+            var page=pdf.Pages[0];var old=page.Contents.Elements.GetDictionary(0)!;
+            var content=Encoding.ASCII.GetString(old.Stream!.UnfilteredValue);
+            content=changePosition?content.Replace("1 0 0 1 50 700 Tm","1 0 0 1 70 700 Tm"):content.Replace("(Otro texto)","(Otro nuevo)");
+            var stream=new PdfDictionary(pdf);stream.CreateStream(Encoding.ASCII.GetBytes(content));
+            pdf.Internals.AddObject(stream);page.Contents.Elements[0]=stream.Reference!;pdf.Save(changed);
+        }
+        using var modified=new PdfDocumentSession(changed);
+        Assert.Null(Assert.Single(modified.AnalyzeText(1).Blocks).LayoutWidth);
+    }
+
     public void Dispose() {
         if(Directory.Exists(directory)) Directory.Delete(directory, true);
     }

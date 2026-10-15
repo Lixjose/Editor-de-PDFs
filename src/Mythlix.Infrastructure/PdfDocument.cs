@@ -63,14 +63,8 @@ public sealed class PdfDocumentSession : IPdfDocument, IContentEditor, ISearchab
    if(Math.Abs(delta)>.01) {
     var p=document.Pages[page-1];
     var analysis=AnalyzeText(page);
-    if(geometry.Rotation!=0 || !geometry.CanEdit || analysis.UnsupportedBlocks>0 || GetGraphics(page).Count>0)
+    if(geometry.Rotation!=0 || !geometry.CanEdit || analysis.UnsupportedBlocks>0 )
      throw new InvalidOperationException("Desbordamiento: no se puede desplazar automáticamente una página con bloques no compatibles, gráficos o rotación.");
-    var fixedOperators=new HashSet<string>{"re","m","l","c","v","y","S","s","f","F","f*","B","B*","b","b*","Do","BI","sh"};
-    for(var i=0;i<p.Contents.Elements.Count;i++) {
-     var bytes=p.Contents.Elements.GetDictionary(i)?.Stream?.UnfilteredValue;
-     if(bytes is not null && TextEditing.ContentTokenizer.Read(bytes).Any(t=>t.Bytes is null && fixedOperators.Contains(t.Value)))
-      throw new InvalidOperationException("Desbordamiento: la página contiene gráficos o imágenes fijos; el desplazamiento automático está bloqueado.");
-    }
     var ids=paragraph.Lines.Select(b=>b.Id).ToHashSet();
     var bottom=paragraph.Bounds.Y+paragraph.Bounds.Height;
     var seeds=originals.Where(b=>!ids.Contains(b.Id) && b.Bounds.Y>=bottom-0.5
@@ -78,6 +72,13 @@ public sealed class PdfDocumentSession : IPdfDocument, IContentEditor, ISearchab
     // Include short final rows of the same following paragraph, keeping its lines together.
     var lower=seeds.SelectMany(b=>PdfParagraph.Around(b,originals).Lines)
      .Where(b=>!ids.Contains(b.Id) && b.Bounds.Y>=bottom-.5).DistinctBy(b=>b.Id).ToArray();
+    var left=Math.Min(paragraph.Bounds.X,lower.Select(b=>b.Bounds.X).DefaultIfEmpty(paragraph.Bounds.X).Min());
+    var right=Math.Max(paragraph.Bounds.X+paragraph.Bounds.Width,lower.Select(b=>b.Bounds.X+b.Bounds.Width).DefaultIfEmpty(paragraph.Bounds.X+paragraph.Bounds.Width).Max());
+    var corridor=new ObjectBounds(left,paragraph.Bounds.Y,right-left,Math.Max(0,geometry.Height-36-paragraph.Bounds.Y));
+    var graphicCollision=GetGraphics(page).Any(g=>g.X-g.StrokeWidth<=right && g.X+g.Width+g.StrokeWidth>=left
+      && g.Y-g.StrokeWidth<=geometry.Height-36 && g.Y+g.Height+g.StrokeWidth>=paragraph.Bounds.Y);
+    if(graphicCollision || TextEditing.FixedGraphicsGuard.Blocks(p,geometry,corridor))
+     throw new InvalidOperationException("Desbordamiento: hay gráficos en el corredor de desplazamiento o gráficos cuya posición no se puede verificar.");
     if(bottom+delta>geometry.Height-36 || lower.Any(b=>b.Bounds.Y+b.Bounds.Height>geometry.Height-36 || b.Bounds.Y+delta<bottom+delta-0.5 || b.Bounds.Y+b.Bounds.Height+delta>geometry.Height-36))
      throw new InvalidOperationException("Desbordamiento: el texto invadiría el margen inferior de 36 pt.");
     var moving=lower.Select(b=>b.Bounds with {Y=b.Bounds.Y+delta}).Append(paragraph.Bounds with {Height=paragraph.Bounds.Height+delta}).ToArray();

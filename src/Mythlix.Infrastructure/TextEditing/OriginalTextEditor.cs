@@ -207,16 +207,18 @@ internal static class OriginalTextEditor {
         var height = (metrics.Ascent - metrics.Descent) * size / 1000;
         if(width <= 0 || x < 0 || top < 0 || x + width > geometry.Width || top + height > geometry.Height) return null;
 
-        // Detect color in block if rg operator exists
-        var hexColor = "#000000";
-        for(var i = 0; i < tokens.Length; i++) {
-            if(tokens[i].Bytes is null && tokens[i].Value == "rg" && i >= 3) {
-                if(tokens[i - 3].Number(out var r) && tokens[i - 2].Number(out var g) && tokens[i - 1].Number(out var b)) {
-                    var ri = Math.Clamp((int)Math.Round(r * 255), 0, 255);
-                    var gi = Math.Clamp((int)Math.Round(g * 255), 0, 255);
-                    var bi = Math.Clamp((int)Math.Round(b * 255), 0, 255);
-                    hexColor = $"#{ri:X2}{gi:X2}{bi:X2}";
-                }
+        // Resolve fill changes in operator order, before the text is shown.
+        var hexColor="#000000";
+        int ToChannel(double value)=>Math.Clamp((int)Math.Round(value*255),0,255);
+        for(var i=0;i<show.i;i++) {
+            if(tokens[i].Bytes is not null)continue;
+            if(tokens[i].Value=="rg" && i>=3 && tokens[i-3].Number(out var r) && tokens[i-2].Number(out var g) && tokens[i-1].Number(out var b))
+                hexColor=$"#{ToChannel(r):X2}{ToChannel(g):X2}{ToChannel(b):X2}";
+            else if(tokens[i].Value=="g" && i>=1 && tokens[i-1].Number(out var gray)) {
+                var channel=ToChannel(gray);hexColor=$"#{channel:X2}{channel:X2}{channel:X2}";
+            } else if(tokens[i].Value=="k" && i>=4 && tokens[i-4].Number(out var cyan) && tokens[i-3].Number(out var magenta) && tokens[i-2].Number(out var yellow) && tokens[i-1].Number(out var black)) {
+                int Channel(double component)=>ToChannel(1-Math.Clamp(component+black,0,1));
+                hexColor=$"#{Channel(cyan):X2}{Channel(magenta):X2}{Channel(yellow):X2}";
             }
         }
 
@@ -229,10 +231,13 @@ internal static class OriginalTextEditor {
 
         var baseline = top + metrics.Ascent * size / 1000;
         double? layoutWidth=null,layoutLeading=null;
-        var marker=System.Text.RegularExpressions.Regex.Match(Encoding.ASCII.GetString(bytes,btByteStart,btByteLength),@"(?m)^%MythlixLayout ([0-9.]+) ([0-9.]+)\r?$");
+        var marker=System.Text.RegularExpressions.Regex.Match(Encoding.ASCII.GetString(bytes,btByteStart,btByteLength),@"(?m)^%MythlixLayout W=([0-9.Ee+-]+) L=([0-9.Ee+-]+) X=([0-9.Ee+-]+) H=([A-F0-9]{16})\r?$");
         if(marker.Success && double.TryParse(marker.Groups[1].Value,NumberStyles.Float,CultureInfo.InvariantCulture,out var storedWidth)
          && double.TryParse(marker.Groups[2].Value,NumberStyles.Float,CultureInfo.InvariantCulture,out var storedLeading)
-         && storedWidth>0 && storedWidth<=geometry.Width && storedLeading>0 && storedLeading<=geometry.Height) {
+         && double.TryParse(marker.Groups[3].Value,NumberStyles.Float,CultureInfo.InvariantCulture,out var storedX)
+         && double.IsFinite(storedWidth) && double.IsFinite(storedLeading) && double.IsFinite(storedX)
+         && storedWidth>0 && storedWidth<=geometry.Width && storedLeading>0 && storedLeading<=geometry.Height
+         && Math.Abs(storedX-x)<=.01 && marker.Groups[4].Value==LayoutHash(value,family,size)) {
             layoutWidth=storedWidth;layoutLeading=storedLeading;
         }
         var blockObj = new OriginalTextBlock(
@@ -249,6 +254,8 @@ internal static class OriginalTextEditor {
 
         return new(blockObj, stream, text, tokens[font.i - 1], widths, winAnsi, btByteStart, btByteLength, name.TrimStart('/'), family, x, y, tokens[position.i-1]);
     }
+
+    static string LayoutHash(string text,string font,double size) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(font+"\n"+size.ToString("G17",CultureInfo.InvariantCulture)+"\n"+text)))[..16];
 
     internal static void ShiftLines(PdfDocument document,PdfPage page,PageGeometry geometry,IReadOnlyList<OriginalTextBlock> blocks,double delta) {
         var candidates=Read(page,geometry).Items;
@@ -350,7 +357,6 @@ internal static class OriginalTextEditor {
 
         var sb = new StringBuilder();
         sb.AppendLine("q\nBT");
-        sb.AppendLine($"%MythlixLayout {maxWidth.ToString("G17",CultureInfo.InvariantCulture)} {(options.LineHeight ?? candidate.Block.LayoutLineHeight ?? options.FontSize*1.25).ToString("G17",CultureInfo.InvariantCulture)}");
         sb.AppendLine("0 Tw 0 Ts 0 Tr");
         sb.AppendLine($"{characterSpacing.ToString("G17",CultureInfo.InvariantCulture)} Tc {(horizontalScale*100).ToString("G17",CultureInfo.InvariantCulture)} Tz");
         sb.AppendLine($"/{fontRes} {options.FontSize.ToString("G17", CultureInfo.InvariantCulture)} Tf");
@@ -378,6 +384,7 @@ internal static class OriginalTextEditor {
                 double lineX = startX + line.XOffset*horizontalScale;
                 double lineY = startBaselineY - (i * leading);
                 sb.AppendLine($"1 0 0 1 {lineX.ToString("G17", CultureInfo.InvariantCulture)} {lineY.ToString("G17", CultureInfo.InvariantCulture)} Tm");
+                sb.AppendLine($"%MythlixLayout W={maxWidth.ToString("G17",CultureInfo.InvariantCulture)} L={leading.ToString("G17",CultureInfo.InvariantCulture)} X={lineX.ToString("G17",CultureInfo.InvariantCulture)} H={LayoutHash(line.Text,targetBaseFont,options.FontSize)}");
                 sb.AppendLine($"{line.WordSpacing.ToString("G17", CultureInfo.InvariantCulture)} Tw");
                 sb.Append(Encoding.ASCII.GetString(ContentTokenizer.Literal(line.EncodedBytes)));
                 sb.AppendLine(" Tj");

@@ -355,7 +355,7 @@ public partial class MainWindow : Window {
    var factor=PdfCanvas.Bounds.Width/vm.Geometry.DisplayWidth;
    rect=new Rect(bounds.X*factor,bounds.Y*factor,bounds.Width*factor,bounds.Height*factor);
   }
-  var background=vm.PageImage is {} image?Controls.EditingBackground.Sample(image,rect,PdfCanvas.Bounds.Size):null;
+  var background=vm.PageImage is {} image?Controls.EditingBackground.Sample(image,rect,PdfCanvas.Bounds.Size,Color.TryParse(block.Color,out var foreground)?foreground:Colors.Black):null;
   if(background is null) {
    activeEditingParagraph=null;
    vm.Status="Fondo no uniforme: use el panel de texto para editar sin ocultar imágenes o degradados.";
@@ -420,7 +420,7 @@ public partial class MainWindow : Window {
   DirectEditor.TextAlignment=Avalonia.Media.TextAlignment.Left;
   DirectEditor.LineHeight=double.NaN;
   DirectEditor.RenderTransform=null;
-  var background=vm.PageImage is {} image?Controls.EditingBackground.Sample(image,rect,PdfCanvas.Bounds.Size):null;
+  var background=vm.PageImage is {} image?Controls.EditingBackground.Sample(image,rect,PdfCanvas.Bounds.Size,Color.TryParse(obj.Color,out var foreground)?foreground:Colors.Black):null;
   if(background is null) {vm.Status="Fondo no uniforme: use el panel de propiedades para editar el texto.";return;}
   vm.EditingBackground=background;
   activeEditingGraphic = obj;

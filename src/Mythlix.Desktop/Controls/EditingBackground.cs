@@ -7,7 +7,7 @@ using Mythlix.Core;
 namespace Mythlix.Desktop.Controls;
 
 internal static class EditingBackground {
- public static IBrush? Sample(Bitmap bitmap,Rect displayBox,Size displaySize) {
+ public static IBrush? Sample(Bitmap bitmap,Rect displayBox,Size displaySize,Color foreground) {
   if(displaySize.Width<=0 || displaySize.Height<=0)return null;
   var size=bitmap.PixelSize;
   using var copy=new WriteableBitmap(size,new Vector(96,96),PixelFormat.Bgra8888,AlphaFormat.Unpremul);
@@ -26,6 +26,12 @@ internal static class EditingBackground {
    for(var y=top+2;y<bottom-1;y++){Read(left+offset,y);Read(right-offset,y);}
   }
   var color=BackgroundColorSampler.UniformColor(samples);
-  return color.HasValue?new SolidColorBrush(Color.FromUInt32(color.Value)):null;
+  if(!color.HasValue)return null;
+  IEnumerable<uint> Interior() {
+   for(var y=Math.Max(0,top+3);y<=Math.Min(size.Height-1,bottom-3);y++)
+    for(var x=Math.Max(0,left+3);x<=Math.Min(size.Width-1,right-3);x++)
+     yield return unchecked((uint)Marshal.ReadInt32(pixels.Address,y*pixels.RowBytes+x*4));
+  }
+  return BackgroundColorSampler.InteriorMatches(Interior(),color.Value,foreground.ToUInt32())?new SolidColorBrush(Color.FromUInt32(color.Value)):null;
  }
 }
