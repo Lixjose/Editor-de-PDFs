@@ -1,6 +1,6 @@
 # Preparación de fase 1: fragmentos de estilo con procedencia
 
-Estado: paso 1A implementado (contratos base inmutables); el nuevo modelo no está activado en el motor ni en la interfaz.
+Estado: pasos 1A y 1B implementados (contratos base y extracción nativa de solo lectura); el nuevo modelo no está activado en el motor ni en la interfaz.
 Esta fase es distinta de la entrega histórica descrita en `../TEXT_ENGINE_PHASE1.md`.
 
 ## Objetivo y alcance
@@ -100,3 +100,22 @@ Los constructores validan rangos sin overflow, identidad y revisión, estados nu
 El modelo puede almacenar texto de borrador todavía no codificable, sin afirmar que tenga glifos o bytes PDF disponibles. La validación completa de grafemas, codificación y mapeo queda para los pasos 1B/1C. No se agregaron métricas ni codificaciones simuladas. El primer color de dominio es RGB; el adaptador deberá convertir Gray de forma explícita y no declarar soporte de espacios de color arbitrarios.
 
 `TextRunContractTests` verifica preservación de múltiples procedencias, aislamiento de colecciones, identidad de fuente por ámbito, revisiones `long`, anclas, rangos inválidos y fronteras UTF-16. El siguiente paso es 1B: extracción nativa de múltiples operadores y cambios de estilo como ruta adicional de solo lectura.
+
+
+## Resultado del paso 1B
+
+`PdfDocumentSession.AnalyzeTextRuns(page, revision)` expone una ruta adicional de solo lectura. La sesión aporta un ID estable durante su vida; la revisión `long` debe proceder del propietario de la sesión. No modifica `IContentEditor`, no se invoca automáticamente durante RenderAsync y no habilita escrituras ni controles nuevos.
+
+`NativeRunExtractor` interpreta varios Tj/TJ y cambios de fuente/estado dentro de BT/ET. Admite fuentes estándar Type 1 de las familias Helvetica, Courier y Times, con WinAnsi explícito, sin fuentes incrustadas ni ToUnicode. Conserva Tc, Tw, Tz, Ts, Tf, relleno RGB/Gray, TL y movimientos Tm (solo traslación), Td, TD, T* y comillas. El estado heredado y q/Q se siguen entre objetos y streams completos.
+
+Cada cadena no vacía produce un `PdfTextRun` con estilo, bytes decodificados inmutables, avances por carácter y posición. Los avances están en puntos e incluyen Tc tras cada carácter, también el último: se utilizan para encontrar el comienzo exacto de la siguiente cadena. La línea base almacenada excluye Ts; el desplazamiento vertical permanece en el estilo. No se publican índices de glifo ni se afirma soporte de shaping.
+
+La procedencia identifica el stream y el rango de bytes del token literal/hexadecimal original (incluidos sus delimitadores), la huella SHA-256 del stream y del objeto BT/ET, y el rango UTF-16 dentro de la concatenación de cadenas de ese objeto. No se insertan espacios o saltos inventados entre cadenas. El operador de visualización tiene su rango independiente. Cada número de TJ se conserva con su rango, valor PDF y desplazamiento efectivo en puntos, sin mezclarlo con bytes ni caracteres.
+
+El ámbito de recursos se resuelve desde la página o sus ancestros sin crear diccionarios. Los anchos declarados, cuando existen, prevalecen sobre las métricas estándar y se validan antes de usarlos. La revisión y página distinguen referencias aunque compartan recursos.
+
+Un operador o estado no compatible rechaza la página completa con un diagnóstico estructurado y vacía los resultados parciales. Entre las restricciones están CTM, recortes, XObjects, marcado lógico, estados gráficos externos, color no admitido, rotación, texto que no sea relleno, objetos divididos entre streams y capas Mythlix/OCR añadidas. No se ignoran estas capas suponiendo que no afecten al estado. El editor anterior sigue disponible con sus capacidades propias.
+
+Pruebas `NativeRunExtractionTests`: estilos mixtos, tamaños decimales, estado heredado, recursos heredados, cadenas escapadas y hexadecimales, WinAnsi, TJ y sus ajustes, avances y líneas base, fuentes/codificaciones no compatibles, contenido inválido, streams comprimidos/compartidos y comparación de píxeles tras analizar y guardar. Las pruebas históricas de preparación continúan comprobando que el escritor anterior no declare editables objetos mixtos.
+
+El siguiente paso es 1C: buffer de mutaciones y validación WinAnsi sobre estos contratos. La composición compartida y la escritura mixta todavía no están implementadas.

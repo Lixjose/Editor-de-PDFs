@@ -4,6 +4,7 @@ using PdfSharp.Pdf.IO;
 namespace Mythlix.Infrastructure;
 public sealed class PdfDocumentSession : IPdfDocument, IContentEditor, ISearchablePdfEditor, IPageDecorator {
  PdfDocument document;
+ readonly Guid textDocumentId = Guid.NewGuid();
  public PdfDocumentSession(string path) {
   if (new FileInfo(path).Length > 256L * 1024 * 1024) throw new InvalidOperationException("Límite inicial: 256 MB por documento.");
   document = PdfReader.Open(path, PdfDocumentOpenMode.Modify);
@@ -35,6 +36,12 @@ public sealed class PdfDocumentSession : IPdfDocument, IContentEditor, ISearchab
   token.ThrowIfCancellationRequested();if(pages.Count==0)return;var before=Snapshot();
   try{for(var i=0;i<pages.Count;i++){token.ThrowIfCancellationRequested();var (page,result)=pages[i];Ocr.SearchableLayerWriter.Write(document.Pages[page-1],GetPageGeometry(page),result);progress?.Report(i+1);}token.ThrowIfCancellationRequested();}
   catch{Restore(before);throw;}
+ }
+ /// <summary>Additional read-only native run analysis. Revision is supplied by the owning workspace.</summary>
+ public Mythlix.Core.TextEditing.NativeRunAnalysis AnalyzeTextRuns(int page, long revision) {
+  ValidatePage(page);
+  return TextEditing.NativeRunExtractor.Analyze(document.Pages[page-1],GetPageGeometry(page),
+   new Mythlix.Core.TextEditing.TextDocumentContext(textDocumentId,page,revision));
  }
  public TextAnalysis AnalyzeText(int page) => TextEditing.OriginalTextEditor.Analyze(document.Pages[page-1],GetPageGeometry(page));
  public void ReplaceText(int page,OriginalTextBlock block,string replacement,double fontSize) =>
