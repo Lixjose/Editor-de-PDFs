@@ -1,5 +1,7 @@
 <Application xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="Mythlix.Desktop.App" RequestedThemeVariant="Dark">
+ <Application.Resources><ResourceDictionary><ResourceDictionary.MergedDictionaries><ResourceInclude Source="avares://Mythlix.Desktop/Themes/Studio.axaml"/></ResourceDictionary.MergedDictionaries></ResourceDictionary></Application.Resources>
  <Application.Styles>
-  <FluentTheme><FluentTheme.Palettes><ColorPaletteResources x:Key="Dark" Accent="#4F46E5"/></FluentTheme.Palettes></FluentTheme>
+  <FluentTheme><FluentTheme.Palettes><ColorPaletteResources x:Key="Dark" Accent="#4F46E5"/><ColorPaletteResources x:Key="Light" Accent="#4F46E5"/></FluentTheme.Palettes></FluentTheme>
+  <Style Selector="Window"><Setter Property="Background" Value="{DynamicResource StudioBase}"/><Setter Property="Foreground" Value="{DynamicResource StudioText}"/><Setter Property="FontFamily" Value="avares://Avalonia.Fonts.Inter/Assets#Inter"/></Style>
  </Application.Styles>
 </Application>

@@ -1,22 +1,38 @@
-<Window xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:controls="clr-namespace:Mythlix.Desktop.Controls" x:Class="Mythlix.Desktop.Views.MainWindow" Icon="avares://Mythlix.Desktop/Assets/mythlix.ico" Title="Mythlix — Editor PDF" Width="1500" Height="1000" MinWidth="1080" MinHeight="720" Background="#121316" FontSize="13">
+<Window xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:controls="clr-namespace:Mythlix.Desktop.Controls" x:Class="Mythlix.Desktop.Views.MainWindow" Icon="avares://Mythlix.Desktop/Assets/mythlix.ico" Title="Mythlix — Editor PDF" Width="1500" Height="1000" MinWidth="980" MinHeight="720" Background="{DynamicResource StudioBase}" FontSize="13">
  <Window.Styles>
-  <Style Selector="Button"><Setter Property="Background" Value="Transparent"/><Setter Property="BorderThickness" Value="0"/><Setter Property="Margin" Value="2"/><Setter Property="Padding" Value="10,6"/><Setter Property="CornerRadius" Value="3"/><Setter Property="MinHeight" Value="30"/><Setter Property="Foreground" Value="#C7C4D8"/></Style>
-  <Style Selector="Button:pointerover"><Setter Property="Background" Value="#292A2D"/></Style>
+  <Style Selector="controls|StudioIcon"><Setter Property="Stroke" Value="{DynamicResource StudioText}"/></Style>
+  <Style Selector="Button.primary controls|StudioIcon"><Setter Property="Stroke" Value="White"/></Style>
+  <Style Selector="ScrollBar:vertical"><Setter Property="Width" Value="6"/><Setter Property="MinWidth" Value="6"/></Style>
+  <Style Selector="ScrollBar:horizontal"><Setter Property="Height" Value="6"/><Setter Property="MinHeight" Value="6"/></Style>
+  <Style Selector="ToggleButton.alignment"><Setter Property="Background" Value="Transparent"/><Setter Property="Padding" Value="8,6"/><Setter Property="HorizontalAlignment" Value="Stretch"/><Setter Property="HorizontalContentAlignment" Value="Center"/><Setter Property="BorderThickness" Value="0"/></Style>
+  <Style Selector="ToggleButton.alignment:checked"><Setter Property="Background" Value="{DynamicResource StudioSelected}"/></Style>
+  <Style Selector="TextBox.code"><Setter Property="FontFamily" Value="monospace"/></Style>
+  <Style Selector="NumericUpDown"><Setter Property="FontFeatures" Value="tnum"/></Style>
+  <Style Selector="Button.tool"><Setter Property="Width" Value="36"/><Setter Property="Height" Value="34"/><Setter Property="Padding" Value="7"/></Style>
+  <Style Selector="Button.tool.active"><Setter Property="Background" Value="{DynamicResource StudioSelected}"/><Setter Property="BorderBrush" Value="{DynamicResource StudioAccent}"/><Setter Property="BorderThickness" Value="1"/></Style>
+  <Style Selector="Button.tool.active controls|StudioIcon"><Setter Property="Stroke" Value="{DynamicResource StudioAccent}"/></Style>
+  <Style Selector="ComboBox"><Setter Property="Background" Value="{DynamicResource StudioInset}"/><Setter Property="BorderBrush" Value="{DynamicResource StudioBorder}"/><Setter Property="MinHeight" Value="28"/><Setter Property="FontSize" Value="12"/></Style>
+  <Style Selector="NumericUpDown"><Setter Property="MinHeight" Value="28"/><Setter Property="FormatString" Value="0.##"/></Style>
+  <Style Selector="TextBlock.mono"><Setter Property="FontFamily" Value="monospace"/><Setter Property="FontSize" Value="11"/><Setter Property="Foreground" Value="{DynamicResource StudioCyan}"/></Style>
+  <Style Selector="ListBox#DocumentTabs ListBoxItem"><Setter Property="Padding" Value="14,4"/><Setter Property="Margin" Value="2,1"/><Setter Property="BorderThickness" Value="0,0,0,2"/><Setter Property="BorderBrush" Value="Transparent"/></Style>
+  <Style Selector="ListBox#DocumentTabs ListBoxItem:selected"><Setter Property="BorderBrush" Value="{DynamicResource StudioAccent}"/></Style>
+  <Style Selector="Button"><Setter Property="Background" Value="Transparent"/><Setter Property="BorderThickness" Value="0"/><Setter Property="Margin" Value="2"/><Setter Property="Padding" Value="10,6"/><Setter Property="CornerRadius" Value="3"/><Setter Property="MinHeight" Value="30"/><Setter Property="Foreground" Value="{DynamicResource StudioText}"/></Style>
+  <Style Selector="Button:pointerover"><Setter Property="Background" Value="{DynamicResource StudioHover}"/></Style>
   <Style Selector="Button.primary"><Setter Property="Background" Value="#4F46E5"/><Setter Property="Foreground" Value="White"/></Style>
-  <Style Selector="Button.utility"><Setter Property="Background" Value="#24262B"/><Setter Property="BorderThickness" Value="1"/><Setter Property="BorderBrush" Value="#343538"/></Style>
-  <Style Selector="TextBlock"><Setter Property="Foreground" Value="#E3E2E6"/></Style>
-  <Style Selector="TextBlock.caption"><Setter Property="Foreground" Value="#918FA1"/><Setter Property="FontSize" Value="11"/></Style>
-  <Style Selector="TextBox"><Setter Property="FontSize" Value="12"/><Setter Property="Background" Value="#16171A"/><Setter Property="BorderBrush" Value="#343538"/><Setter Property="CornerRadius" Value="3"/></Style>
-  <Style Selector="NumericUpDown"><Setter Property="FontSize" Value="12"/><Setter Property="Background" Value="#16171A"/><Setter Property="BorderBrush" Value="#343538"/></Style>
+  <Style Selector="Button.utility"><Setter Property="Background" Value="{DynamicResource StudioRaised}"/><Setter Property="BorderThickness" Value="1"/><Setter Property="BorderBrush" Value="{DynamicResource StudioBorder}"/></Style>
+  <Style Selector="TextBlock"><Setter Property="Foreground" Value="{DynamicResource StudioText}"/></Style>
+  <Style Selector="TextBlock.caption"><Setter Property="Foreground" Value="{DynamicResource StudioMuted}"/><Setter Property="FontSize" Value="11"/></Style>
+  <Style Selector="TextBox"><Setter Property="FontSize" Value="12"/><Setter Property="Background" Value="{DynamicResource StudioInset}"/><Setter Property="BorderBrush" Value="{DynamicResource StudioBorder}"/><Setter Property="CornerRadius" Value="3"/></Style>
+  <Style Selector="NumericUpDown"><Setter Property="FontSize" Value="12"/><Setter Property="Background" Value="{DynamicResource StudioInset}"/><Setter Property="BorderBrush" Value="{DynamicResource StudioBorder}"/></Style>
   <Style Selector="ListBox"><Setter Property="Background" Value="Transparent"/><Setter Property="BorderThickness" Value="0"/></Style>
   <Style Selector="ListBoxItem"><Setter Property="Padding" Value="6"/><Setter Property="Margin" Value="0,2"/><Setter Property="CornerRadius" Value="4"/></Style>
-  <Style Selector="ListBoxItem:selected"><Setter Property="Background" Value="#254F46E5"/></Style>
+  <Style Selector="ListBoxItem:selected"><Setter Property="Background" Value="{DynamicResource StudioSelected}"/></Style>
   <Style Selector="ListBoxItem:selected Border.thumbnail"><Setter Property="BorderBrush" Value="#4F46E5"/><Setter Property="BorderThickness" Value="2"/></Style>
-  <Style Selector="Border.section"><Setter Property="BorderBrush" Value="#292A2D"/><Setter Property="BorderThickness" Value="0,0,0,1"/><Setter Property="Padding" Value="12,14"/></Style>
+  <Style Selector="Border.section"><Setter Property="BorderBrush" Value="{DynamicResource StudioHover}"/><Setter Property="BorderThickness" Value="0,0,0,1"/><Setter Property="Padding" Value="12,12"/></Style>
  </Window.Styles>
- <Grid RowDefinitions="40,32,48,*,30">
-  <Grid ColumnDefinitions="210,*,Auto" Background="#0D0E11">
-   <StackPanel Orientation="Horizontal" Margin="12,0" VerticalAlignment="Center" Spacing="8"><Image Source="avares://Mythlix.Desktop/Assets/mythlix.png" Width="30" Height="30" Stretch="Uniform" ToolTip.Tip="Mythlix"/><TextBlock Text="Mythlix" FontSize="16" FontWeight="SemiBold"/><TextBlock Text="— Editor" Foreground="#918FA1"/></StackPanel>
+ <Grid RowDefinitions="40,32,48,*,28">
+  <Grid ColumnDefinitions="210,*,Auto" Background="{DynamicResource StudioChrome}">
+   <StackPanel Orientation="Horizontal" Margin="12,0" VerticalAlignment="Center" Spacing="8"><Image Source="avares://Mythlix.Desktop/Assets/mythlix.png" Width="30" Height="30" Stretch="Uniform" ToolTip.Tip="Mythlix"/><TextBlock Text="Mythlix" FontSize="16" FontWeight="SemiBold"/><TextBlock Text="— Editor" Foreground="{DynamicResource StudioMuted}"/></StackPanel>
    <Menu Grid.Column="1" Background="Transparent" VerticalAlignment="Center" IsEnabled="{Binding !Busy}">
     <MenuItem Header="Archivo"><MenuItem Header="Abrir PDF…" Click="OpenClick"/><MenuItem Header="Guardar copia…" Click="SaveClick"/><MenuItem Header="Cerrar documento" Click="CloseClick"/></MenuItem>
     <MenuItem Header="Editar"><MenuItem Header="Seleccionar texto original" Click="OriginalModeClick"/><MenuItem Header="Deshacer" Click="UndoClick"/><MenuItem Header="Rehacer" Click="RedoClick"/></MenuItem>
@@ -25,37 +41,51 @@
     <MenuItem Header="Convertir"><MenuItem Header="Crear PDF desde imágenes…" Click="ImagesToPdfClick"/><MenuItem Header="Exportar páginas como PNG…" Click="ExportImagesClick"/></MenuItem>
     <MenuItem Header="OCR"><MenuItem Header="Reconocimiento local…" Click="OcrClick"/></MenuItem>
    </Menu>
-   <TextBlock Grid.Column="2" Text="LOCAL · PDF STUDIO" Classes="caption" VerticalAlignment="Center" Margin="12,0"/>
+   <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0" Spacing="4">
+    <TextBlock Text="LOCAL" Classes="caption" VerticalAlignment="Center" Margin="6,0"/>
+    <Button x:Name="ThemeSwitch" Click="ToggleStudioTheme" ToolTip.Tip="Cambiar tema claro / oscuro" AutomationProperties.Name="Cambiar tema claro u oscuro"><StackPanel Orientation="Horizontal" Spacing="6"><controls:StudioIcon Kind="theme"/><TextBlock x:Name="ThemeLabel" Text="Claro" VerticalAlignment="Center"/></StackPanel></Button>
+   </StackPanel>
   </Grid>
-  <Border Grid.Row="1" BorderBrush="#292A2D" BorderThickness="0,0,0,1" Background="#121316"><ListBox IsEnabled="{Binding !Busy}" x:Name="DocumentTabs" ItemsSource="{Binding Documents}" SelectedItem="{Binding Selected}" SelectionChanged="TabChanged">
+  <Border Grid.Row="1" BorderBrush="{DynamicResource StudioHover}" BorderThickness="0,0,0,1" Background="{DynamicResource StudioBase}"><ListBox IsEnabled="{Binding !Busy}" x:Name="DocumentTabs" ItemsSource="{Binding Documents}" SelectedItem="{Binding Selected}" SelectionChanged="TabChanged">
    <ListBox.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate></ListBox.ItemsPanel>
-   <ListBox.ItemTemplate><DataTemplate><StackPanel Orientation="Horizontal" Spacing="8"><TextBlock Text="●" Foreground="#7BD0FF" FontSize="10" VerticalAlignment="Center"/><TextBlock Text="{Binding Name}" FontSize="12"/><TextBlock Text="•" Foreground="#C3C0FF" IsVisible="{Binding Modified}"/></StackPanel></DataTemplate></ListBox.ItemTemplate>
+   <ListBox.ItemTemplate><DataTemplate><StackPanel Orientation="Horizontal" Spacing="8"><TextBlock Text="●" Foreground="{DynamicResource StudioCyan}" FontSize="10" VerticalAlignment="Center"/><TextBlock Text="{Binding Name}" FontSize="12"/><TextBlock Text="•" Foreground="#C3C0FF" IsVisible="{Binding Modified}"/></StackPanel></DataTemplate></ListBox.ItemTemplate>
   </ListBox></Border>
-  <Grid Grid.Row="2" ColumnDefinitions="*,Auto" Background="#1B1B1F">
-   <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled"><StackPanel Orientation="Horizontal" VerticalAlignment="Center" IsEnabled="{Binding !Busy}" Margin="8,0">
-    <Button Content="↖" Classes="primary" Click="SelectModeClick" ToolTip.Tip="Seleccionar elementos" FontSize="20"/>
-    <Button Content="T  Original" Click="OriginalModeClick" ToolTip.Tip="Seleccionar un bloque de texto original compatible"/>
-    <Border Width="1" Background="#464555" Margin="8"/>
-    <Button Content="T+" Command="{Binding AddTextCommand}" FontSize="18" ToolTip.Tip="Insertar texto nuevo"/>
-    <Button Content="▧" Click="InsertImageClick" FontSize="20" ToolTip.Tip="Insertar imagen"/>
-    <Button Content="□" Command="{Binding AddRectangleCommand}" FontSize="20" ToolTip.Tip="Rectángulo"/><Button Content="◯" Command="{Binding AddEllipseCommand}" FontSize="20" ToolTip.Tip="Elipse"/><Button Content="╱" Command="{Binding AddLineCommand}" FontSize="20" ToolTip.Tip="Línea"/>
-    <Border Width="1" Background="#464555" Margin="8"/><TextBlock Text="{Binding SelectionLabel}" Classes="caption" VerticalAlignment="Center" Margin="8,0"/>
+  <Grid Grid.Row="2" ColumnDefinitions="*,Auto" Background="{DynamicResource StudioPanel}">
+   <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled"><StackPanel Orientation="Horizontal" VerticalAlignment="Center" IsEnabled="{Binding !Busy}" Margin="8,0" Spacing="2">
+    <Button x:Name="SelectTool" Classes="tool active" Click="SelectModeClick" ToolTip.Tip="Seleccionar elementos" AutomationProperties.Name="Seleccionar elementos"><controls:StudioIcon Kind="select"/></Button>
+    <Button x:Name="OriginalTool" Classes="tool" Click="OriginalModeClick" ToolTip.Tip="Texto original" AutomationProperties.Name="Seleccionar texto original"><controls:StudioIcon Kind="text"/></Button>
+    <Border Width="1" Background="{DynamicResource StudioBorder}" Margin="8,6"/>
+    <Button Classes="tool" Command="{Binding AddTextCommand}" ToolTip.Tip="Insertar texto" AutomationProperties.Name="Insertar texto"><controls:StudioIcon Kind="plus"/></Button>
+    <Button Classes="tool" Click="InsertImageClick" ToolTip.Tip="Insertar imagen" AutomationProperties.Name="Insertar imagen"><controls:StudioIcon Kind="image"/></Button>
+    <Button Classes="tool" Command="{Binding AddRectangleCommand}" ToolTip.Tip="Rectángulo" AutomationProperties.Name="Insertar rectángulo"><controls:StudioIcon Kind="rectangle"/></Button>
+    <Button Classes="tool" Command="{Binding AddEllipseCommand}" ToolTip.Tip="Elipse" AutomationProperties.Name="Insertar elipse"><controls:StudioIcon Kind="ellipse"/></Button>
+    <Button Classes="tool" Command="{Binding AddLineCommand}" ToolTip.Tip="Línea" AutomationProperties.Name="Insertar línea"><controls:StudioIcon Kind="line"/></Button>
+    <Border Width="1" Background="{DynamicResource StudioBorder}" Margin="8,6"/>
+    <TextBlock Text="{Binding SelectionLabel}" Classes="caption" VerticalAlignment="Center" Margin="8,0" MaxWidth="260" TextTrimming="CharacterEllipsis"/>
    </StackPanel></ScrollViewer>
-   <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" IsEnabled="{Binding !Busy}" Margin="8,0"><Button Content="↶" Click="UndoClick" FontSize="20" ToolTip.Tip="Deshacer"/><Button Content="↷" Click="RedoClick" FontSize="20" ToolTip.Tip="Rehacer"/><Border Width="1" Background="#464555" Margin="8"/><Button Content="↻" Click="RotateClick" ToolTip.Tip="Rotar página 90°" FontSize="20"/><Button Content="▣  Guardar copia" Click="SaveClick" Classes="utility"/></StackPanel>
+   <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" IsEnabled="{Binding !Busy}" Margin="8,0">
+    <Button Classes="tool" Click="UndoClick" ToolTip.Tip="Deshacer" AutomationProperties.Name="Deshacer"><controls:StudioIcon Kind="undo"/></Button>
+    <Button Classes="tool" Click="RedoClick" ToolTip.Tip="Rehacer" AutomationProperties.Name="Rehacer"><controls:StudioIcon Kind="redo"/></Button>
+    <Button Classes="tool" Click="RotateClick" ToolTip.Tip="Rotar página" AutomationProperties.Name="Rotar página"><controls:StudioIcon Kind="rotate"/></Button>
+    <Border Width="1" Background="{DynamicResource StudioBorder}" Margin="8,6"/>
+    <Button Click="SaveClick" Classes="primary" ToolTip.Tip="Guardar una copia del PDF"><StackPanel Orientation="Horizontal" Spacing="8"><controls:StudioIcon Kind="save"/><TextBlock Text="Guardar copia" Foreground="White"/></StackPanel></Button>
+   </StackPanel>
   </Grid>
-  <Grid Grid.Row="3" ColumnDefinitions="260,3,*,3,310">
-   <Grid Background="#1B1B1F" RowDefinitions="44,*,Auto">
-    <Border BorderBrush="#292A2D" BorderThickness="0,1,0,1" Padding="8,10"><Grid ColumnDefinitions="Auto,*,Auto"><TextBlock Text="▤  PÁGINAS" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/><TextBlock Grid.Column="1" Text="{Binding PageCountLabel}" Classes="caption" VerticalAlignment="Center" Margin="6,0"/><StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4"><Button Content="↑" Click="MoveBeforeClick" ToolTip.Tip="Subir página" Padding="5,1"/><Button Content="↓" Click="MoveAfterClick" ToolTip.Tip="Bajar página" Padding="5,1"/></StackPanel></Grid></Border>
+  <Grid Grid.Row="3" x:Name="StudioWorkspace" ColumnDefinitions="260,4,*,4,328">
+   <Grid x:Name="PagesPanel" MinWidth="220" MaxWidth="360" Background="{DynamicResource StudioPanel}" RowDefinitions="44,*,Auto">
+    <Border BorderBrush="{DynamicResource StudioHover}" BorderThickness="0,1,0,1" Padding="8,10"><Grid ColumnDefinitions="Auto,*,Auto"><TextBlock Text="▤  PÁGINAS" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/><TextBlock Grid.Column="1" Text="{Binding PageCountLabel}" Classes="caption" VerticalAlignment="Center" Margin="6,0"/><StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4"><Button Content="↑" Click="MoveBeforeClick" ToolTip.Tip="Subir página" Padding="5,1"/><Button Content="↓" Click="MoveAfterClick" ToolTip.Tip="Bajar página" Padding="5,1"/></StackPanel></Grid></Border>
     <ListBox Grid.Row="1" x:Name="ThumbnailList" SelectedItem="{Binding ActiveThumbnail, Mode=OneWay}" ItemsSource="{Binding PageThumbnails}" SelectionChanged="ThumbnailChanged" IsEnabled="{Binding !Busy}">
-     <ListBox.ItemTemplate><DataTemplate><StackPanel Spacing="6"><Border Classes="thumbnail" Background="#292A2D" BorderBrush="#464555" BorderThickness="1" CornerRadius="3" Padding="8" Height="184"><Grid><Image Source="{Binding Image}" Stretch="Uniform"/><TextBlock Text="{Binding Number}" IsVisible="{Binding !HasImage}" Classes="caption" VerticalAlignment="Center" HorizontalAlignment="Center"/></Grid></Border><TextBlock Text="{Binding Label}" FontSize="11" Margin="3,0"/></StackPanel></DataTemplate></ListBox.ItemTemplate>
+     <ListBox.ItemTemplate><DataTemplate><StackPanel Spacing="6"><Border Classes="thumbnail" Background="{DynamicResource StudioHover}" BorderBrush="{DynamicResource StudioBorder}" BorderThickness="1" CornerRadius="3" Padding="8" Height="208"><Grid><Image Source="{Binding Image}" Stretch="Uniform"/><TextBlock Text="{Binding Number}" IsVisible="{Binding !HasImage}" Classes="caption" VerticalAlignment="Center" HorizontalAlignment="Center"/></Grid></Border><TextBlock Text="{Binding Label}" FontSize="11" Margin="3,0"/></StackPanel></DataTemplate></ListBox.ItemTemplate>
     </ListBox>
-    <Border Grid.Row="2" BorderBrush="#292A2D" BorderThickness="0,1,0,0" Padding="10"><StackPanel Spacing="6"><TextBox Text="{Binding Query}" PlaceholderText="Buscar en el documento…"/><Button Content="⌕  Buscar siguiente" Click="SearchClick" HorizontalAlignment="Stretch" Classes="utility"/></StackPanel></Border>
+    <Border Grid.Row="2" BorderBrush="{DynamicResource StudioHover}" BorderThickness="0,1,0,0" Padding="10"><StackPanel Spacing="6"><Button Content="＋  Nueva página" Click="AddClick" IsEnabled="{Binding !IsEmpty}" HorizontalAlignment="Stretch" Classes="utility"/><TextBox Text="{Binding Query}" PlaceholderText="Buscar en el documento…"/><Button Content="⌕  Buscar siguiente" Click="SearchClick" HorizontalAlignment="Stretch" Classes="utility"/></StackPanel></Border>
    </Grid>
-   <GridSplitter Grid.Column="1" ResizeDirection="Columns" Background="#292A2D"/>
+   <GridSplitter x:Name="PagesSplitter" Grid.Column="1" ResizeDirection="Columns" Background="{DynamicResource StudioHover}"/>
    <Grid Grid.Column="2" x:Name="Viewport">
-    <controls:WorkspaceBackdrop IsHitTestVisible="False"/>
-    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"><Grid Margin="34,40">
-     <Grid Width="{Binding DisplayWidth}" Height="{Binding DisplayHeight}" IsVisible="{Binding !IsEmpty}" VerticalAlignment="Top" HorizontalAlignment="Center">
+    <controls:WorkspaceBackdrop Surface="{DynamicResource StudioStage}" Dot="{DynamicResource StudioDot}" IsHitTestVisible="False"/>
+    <ScrollViewer x:Name="PaperScroll" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"><Grid Margin="24" RowDefinitions="24,*" ColumnDefinitions="24,*">
+     <controls:PageRuler Grid.Column="1" Width="{Binding DisplayWidth}" Height="24" LengthPt="{Binding Geometry.DisplayWidth}" Ink="{DynamicResource StudioMuted}" Surface="{DynamicResource StudioPanel}" IsVisible="{Binding !IsEmpty}"/>
+     <controls:PageRuler Grid.Row="1" Width="24" Height="{Binding DisplayHeight}" Vertical="True" LengthPt="{Binding Geometry.DisplayHeight}" Ink="{DynamicResource StudioMuted}" Surface="{DynamicResource StudioPanel}" IsVisible="{Binding !IsEmpty}"/>
+     <Grid Grid.Row="1" Grid.Column="1" Width="{Binding DisplayWidth}" Height="{Binding DisplayHeight}" IsVisible="{Binding !IsEmpty}" VerticalAlignment="Top" HorizontalAlignment="Center">
       <controls:PageCanvas x:Name="PdfCanvas" Workspace="{Binding}" Width="{Binding DisplayWidth}" Height="{Binding DisplayHeight}"/>
       <Canvas x:Name="InlineEditLayer" IsHitTestVisible="True">
        <TextBox x:Name="DirectEditor"
@@ -99,15 +129,15 @@
        </TextBox>
       </Canvas>
      </Grid>
-     <StackPanel IsVisible="{Binding IsEmpty}" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="14"><TextBlock Text="Tu espacio de documentos" FontSize="24" FontWeight="SemiBold"/><TextBlock Text="Edición local · Tu documento permanece en tu equipo" Foreground="#918FA1"/><Button Content="Abrir PDF" Click="OpenClick" Classes="primary" HorizontalAlignment="Center"/></StackPanel>
+     <StackPanel Grid.Row="1" Grid.Column="1" IsVisible="{Binding IsEmpty}" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="14"><TextBlock Text="Tu espacio de documentos" FontSize="24" FontWeight="SemiBold"/><TextBlock Text="Edición local · Tu documento permanece en tu equipo" Foreground="{DynamicResource StudioMuted}"/><Button Content="Abrir PDF" Click="OpenClick" Classes="primary" HorizontalAlignment="Center"/></StackPanel>
     </Grid></ScrollViewer>
    </Grid>
-   <GridSplitter Grid.Column="3" ResizeDirection="Columns" Background="#292A2D"/>
-   <Grid Grid.Column="4" Background="#1B1B1F" RowDefinitions="44,*">
-    <Border BorderBrush="#292A2D" BorderThickness="0,1,0,1" Padding="12"><TextBlock Text="☷  PROPIEDADES" FontWeight="SemiBold" FontSize="12"/></Border>
+   <GridSplitter x:Name="InspectorSplitter" Grid.Column="3" ResizeDirection="Columns" Background="{DynamicResource StudioHover}"/>
+   <Grid x:Name="InspectorPanel" Grid.Column="4" MinWidth="280" MaxWidth="440" Background="{DynamicResource StudioPanel}" RowDefinitions="44,*">
+    <Border BorderBrush="{DynamicResource StudioHover}" BorderThickness="0,1,0,1" Padding="12"><StackPanel Orientation="Horizontal" Spacing="8"><controls:StudioIcon Kind="properties"/><TextBlock Text="PROPIEDADES" FontWeight="SemiBold" FontSize="12" VerticalAlignment="Center"/></StackPanel></Border>
     <ScrollViewer Grid.Row="1"><StackPanel>
      <Border Classes="section" IsVisible="{Binding OcrVisible}"><StackPanel Spacing="8">
-      <Grid ColumnDefinitions="*,Auto"><TextBlock Text="OCR LOCAL" Classes="caption" VerticalAlignment="Center"/><Button Grid.Column="1" Content="×" Command="{Binding HideOcrCommand}" IsEnabled="{Binding !Busy}" ToolTip.Tip="Cerrar panel OCR" Padding="6,2"/></Grid><TextBlock Text="{Binding OcrStatus}" TextWrapping="Wrap" FontSize="11" Foreground="#7BD0FF"/>
+      <Grid ColumnDefinitions="*,Auto"><TextBlock Text="OCR LOCAL" Classes="caption" VerticalAlignment="Center"/><Button Grid.Column="1" Content="×" Command="{Binding HideOcrCommand}" IsEnabled="{Binding !Busy}" ToolTip.Tip="Cerrar panel OCR" Padding="6,2"/></Grid><TextBlock Text="{Binding OcrStatus}" TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource StudioCyan}"/>
       <StackPanel IsEnabled="{Binding !Busy}" Spacing="6"><ComboBox ItemsSource="{Binding OcrLanguages}" SelectedItem="{Binding OcrLanguage, Mode=TwoWay}" HorizontalAlignment="Stretch"><ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Name}"/></DataTemplate></ComboBox.ItemTemplate></ComboBox>
        <ComboBox ItemsSource="{Binding OcrModes}" SelectedItem="{Binding SelectedOcrMode, Mode=TwoWay}" PlaceholderText="Automático" HorizontalAlignment="Stretch"><ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Name}"/></DataTemplate></ComboBox.ItemTemplate></ComboBox>
        <CheckBox Content="Omitir páginas que ya tienen texto" IsChecked="{Binding SkipExistingText, Mode=TwoWay}" FontSize="11"/>
@@ -131,7 +161,62 @@
         <Button Content="Limpiar" Command="{Binding ClearOriginalSelectionCommand}" ToolTip.Tip="Deseleccionar" Padding="5,2" FontSize="10"/>
        </StackPanel>
       </Grid>
-      <TextBlock Text="{Binding OriginalStatus}" FontSize="11" Foreground="#918FA1" TextWrapping="Wrap"/>
+      <StackPanel IsVisible="{Binding HasOriginal}" Spacing="8" IsEnabled="{Binding !Busy}">
+       <TextBlock Text="TIPOGRAFÍA" Classes="caption"/>
+       <Border Background="{DynamicResource StudioRaised}" Padding="9" CornerRadius="3"><TextBlock Text="{Binding OriginalFontLabel}"/></Border>
+
+       <TextBlock Text="TAMAÑO · pt" Classes="caption"/>
+       <NumericUpDown IsEnabled="{Binding SelectedOriginal.CanChangeFontSize}" ToolTip.Tip="El tamaño se bloquea si puede afectar a texto que hereda la fuente." Value="{Binding OriginalDraftSize, Mode=TwoWay}" Minimum="4" Maximum="144" FormatString="0.##"/>
+
+       <StackPanel Orientation="Horizontal" Spacing="12">
+        <CheckBox Content="Negrita" IsChecked="{Binding OriginalDraftBold, Mode=TwoWay}"/>
+        <CheckBox Content="Cursiva" IsChecked="{Binding OriginalDraftItalic, Mode=TwoWay}"/>
+       </StackPanel>
+
+       <TextBlock Text="COLOR · #RRGGBB" Classes="caption"/>
+       <TextBox Classes="code" Text="{Binding OriginalDraftColor, Mode=TwoWay}"/>
+
+
+       <!-- Single Selection Row Alignment and Positioning Tools -->
+       <Expander Header="Disposición y ajustes de fila" HorizontalAlignment="Stretch">       <StackPanel IsVisible="{Binding !IsMultiOriginalSelected}" Spacing="6">
+        <TextBlock Text="ORDEN Y POSICIÓN DE FILA" Classes="caption"/>
+        <Grid ColumnDefinitions="*,*" ColumnSpacing="6">
+         <Button Content="⫷ Fila superior" Command="{Binding AlignWithPreviousRowCommand}" ToolTip.Tip="Ordenar X con la fila superior para que quede perfectamente alineada" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
+         <Button Grid.Column="1" Content="⫸ Fila inferior" Command="{Binding AlignWithNextRowCommand}" ToolTip.Tip="Ordenar X con la fila inferior" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
+        </Grid>
+        <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="6" RowSpacing="3">
+         <TextBlock Text="Posición X (pt)" Classes="caption"/>
+         <TextBlock Grid.Column="1" Text="Línea base Y (pt)" Classes="caption"/>
+         <NumericUpDown Grid.Row="1" Value="{Binding OriginalDraftX, Mode=TwoWay}" Minimum="0" Maximum="2000" FormatString="0.#"/>
+         <NumericUpDown Grid.Row="1" Grid.Column="1" Value="{Binding OriginalDraftBaseline, Mode=TwoWay}" Minimum="0" Maximum="3000" FormatString="0.#"/>
+        </Grid>
+        <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="4">
+         <Button Content="◄ 1pt" Command="{Binding NudgeCommand}" CommandParameter="left" ToolTip.Tip="Ajustar izquierda 1 pt" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
+         <Button Grid.Column="1" Content="► 1pt" Command="{Binding NudgeCommand}" CommandParameter="right" ToolTip.Tip="Ajustar derecha 1 pt" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
+         <Button Grid.Column="2" Content="▲ 1pt" Command="{Binding NudgeCommand}" CommandParameter="up" ToolTip.Tip="Ajustar arriba 1 pt" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
+         <Button Grid.Column="3" Content="▼ 1pt" Command="{Binding NudgeCommand}" CommandParameter="down" ToolTip.Tip="Ajustar abajo 1 pt" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
+        </Grid>
+       </StackPanel></Expander>
+
+       <TextBlock Text="ALINEACIÓN" Classes="caption"/>
+       <Border Background="{DynamicResource StudioInset}" BorderBrush="{DynamicResource StudioBorder}" BorderThickness="1" CornerRadius="4" Padding="3">
+        <UniformGrid Columns="4">
+         <ToggleButton x:Name="OriginalAlignLeft" Tag="0" Classes="alignment" Click="StudioAlignmentClick" ToolTip.Tip="Alinear a la izquierda" AutomationProperties.Name="Alinear a la izquierda"><controls:StudioIcon Kind="align-left"/></ToggleButton>
+         <ToggleButton x:Name="OriginalAlignCenter" Tag="1" Classes="alignment" Click="StudioAlignmentClick" ToolTip.Tip="Centrar párrafo" AutomationProperties.Name="Centrar párrafo"><controls:StudioIcon Kind="align-center"/></ToggleButton>
+         <ToggleButton x:Name="OriginalAlignRight" Tag="2" Classes="alignment" Click="StudioAlignmentClick" ToolTip.Tip="Alinear a la derecha" AutomationProperties.Name="Alinear a la derecha"><controls:StudioIcon Kind="align-right"/></ToggleButton>
+         <ToggleButton x:Name="OriginalAlignJustify" Tag="3" Classes="alignment" Click="StudioAlignmentClick" ToolTip.Tip="Justificar párrafo" AutomationProperties.Name="Justificar párrafo"><controls:StudioIcon Kind="align-justify"/></ToggleButton>
+        </UniformGrid>
+       </Border>
+
+       <TextBlock Text="TEXTO" Classes="caption" IsVisible="{Binding !IsMultiOriginalSelected}"/>
+       <TextBox Text="{Binding OriginalDraftText, Mode=TwoWay}" TextWrapping="Wrap" AcceptsReturn="True" MinHeight="65" MaxHeight="140" IsVisible="{Binding !IsMultiOriginalSelected}"/>
+
+       <TextBlock Text="{Binding OriginalGeometryLabel}" Foreground="{DynamicResource StudioCyan}" FontSize="11" TextWrapping="Wrap"/>
+       <Button Content="Aplicar al texto original" Command="{Binding ApplyOriginalCommand}" Classes="primary" HorizontalAlignment="Stretch"/>
+       <Button Content="Eliminar texto original" Command="{Binding DeleteOriginalCommand}" HorizontalAlignment="Stretch"/>
+       <TextBlock Text="Alineación, reflujo y ordenamiento de filas. Respeta la posición y línea base con respecto a las demás filas." Classes="caption" TextWrapping="Wrap"/>
+      </StackPanel>
+      <TextBlock Text="{Binding OriginalStatus}" FontSize="11" Foreground="{DynamicResource StudioMuted}" TextWrapping="Wrap"/>
       <ListBox ItemsSource="{Binding OriginalBlocks}" SelectedItem="{Binding SelectedOriginal, Mode=TwoWay}" MaxHeight="115" IsEnabled="{Binding !Busy}"><ListBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Label}" FontSize="12" TextTrimming="CharacterEllipsis"/></DataTemplate></ListBox.ItemTemplate></ListBox>
 
       <Expander Header="Análisis de fragmentos" HorizontalAlignment="Stretch">
@@ -152,9 +237,9 @@
            <StackPanel Margin="0,3">
             <TextBlock Text="{Binding Run.Text}" TextWrapping="Wrap"/>
             <StackPanel Orientation="Horizontal" Spacing="6">
-             <TextBlock Text="{Binding Run.Style.FamilyName}" FontSize="10" Foreground="#918FA1"/>
-             <TextBlock Text="{Binding Run.Style.FontSizePt}" FontSize="10" Foreground="#918FA1"/>
-             <TextBlock Text="pt" FontSize="10" Foreground="#918FA1"/>
+             <TextBlock Text="{Binding Run.Style.FamilyName}" FontSize="10" Foreground="{DynamicResource StudioMuted}"/>
+             <TextBlock Text="{Binding Run.Style.FontSizePt}" FontSize="10" Foreground="{DynamicResource StudioMuted}"/>
+             <TextBlock Text="pt" FontSize="10" Foreground="{DynamicResource StudioMuted}"/>
             </StackPanel>
            </StackPanel>
           </DataTemplate></ItemsControl.ItemTemplate>
@@ -164,9 +249,9 @@
       </Expander>
 
       <!-- Multi-selection Positioning and Alignment Tools -->
-      <Border IsVisible="{Binding IsMultiOriginalSelected}" Background="#1F2028" BorderBrush="#4F46E5" BorderThickness="1" CornerRadius="4" Padding="8">
+      <Border IsVisible="{Binding IsMultiOriginalSelected}" Background="{DynamicResource StudioRaised}" BorderBrush="#4F46E5" BorderThickness="1" CornerRadius="4" Padding="8">
        <StackPanel Spacing="6">
-        <TextBlock Text="{Binding MultiSelectionLabel}" FontWeight="SemiBold" Foreground="#A5B4FC" FontSize="12"/>
+        <TextBlock Text="{Binding MultiSelectionLabel}" FontWeight="SemiBold" Foreground="{DynamicResource StudioCyan}" FontSize="12"/>
         <TextBlock Text="ALINEAR TEXTO SELECCIONADO" Classes="caption"/>
         <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="4">
          <Button Content="⫷ Izq" Command="{Binding AlignSelectedLeftCommand}" ToolTip.Tip="Alinear bordes izquierdos al mismo margen" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
@@ -184,58 +269,7 @@
        </StackPanel>
       </Border>
 
-      <StackPanel IsVisible="{Binding HasOriginal}" Spacing="8" IsEnabled="{Binding !Busy}">
-       <!-- Single Selection Row Alignment and Positioning Tools -->
-       <StackPanel IsVisible="{Binding !IsMultiOriginalSelected}" Spacing="6">
-        <TextBlock Text="ORDEN Y POSICIÓN DE FILA" Classes="caption"/>
-        <Grid ColumnDefinitions="*,*" ColumnSpacing="6">
-         <Button Content="⫷ Fila superior" Command="{Binding AlignWithPreviousRowCommand}" ToolTip.Tip="Ordenar X con la fila superior para que quede perfectamente alineada" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
-         <Button Grid.Column="1" Content="⫸ Fila inferior" Command="{Binding AlignWithNextRowCommand}" ToolTip.Tip="Ordenar X con la fila inferior" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
-        </Grid>
-        <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="6" RowSpacing="3">
-         <TextBlock Text="Posición X (pt)" Classes="caption"/>
-         <TextBlock Grid.Column="1" Text="Línea base Y (pt)" Classes="caption"/>
-         <NumericUpDown Grid.Row="1" Value="{Binding OriginalDraftX, Mode=TwoWay}" Minimum="0" Maximum="2000" FormatString="0.#"/>
-         <NumericUpDown Grid.Row="1" Grid.Column="1" Value="{Binding OriginalDraftBaseline, Mode=TwoWay}" Minimum="0" Maximum="3000" FormatString="0.#"/>
-        </Grid>
-        <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="4">
-         <Button Content="◄ 1pt" Command="{Binding NudgeCommand}" CommandParameter="left" ToolTip.Tip="Ajustar izquierda 1 pt" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
-         <Button Grid.Column="1" Content="► 1pt" Command="{Binding NudgeCommand}" CommandParameter="right" ToolTip.Tip="Ajustar derecha 1 pt" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
-         <Button Grid.Column="2" Content="▲ 1pt" Command="{Binding NudgeCommand}" CommandParameter="up" ToolTip.Tip="Ajustar arriba 1 pt" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
-         <Button Grid.Column="3" Content="▼ 1pt" Command="{Binding NudgeCommand}" CommandParameter="down" ToolTip.Tip="Ajustar abajo 1 pt" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
-        </Grid>
-       </StackPanel>
 
-       <TextBlock Text="ALINEACIÓN" Classes="caption"/>
-       <ComboBox SelectedIndex="{Binding OriginalDraftAlignmentIndex, Mode=TwoWay}" HorizontalAlignment="Stretch">
-        <ComboBoxItem>Izquierda</ComboBoxItem>
-        <ComboBoxItem>Centro</ComboBoxItem>
-        <ComboBoxItem>Derecha</ComboBoxItem>
-        <ComboBoxItem>Justificado</ComboBoxItem>
-       </ComboBox>
-
-       <TextBlock Text="TEXTO" Classes="caption" IsVisible="{Binding !IsMultiOriginalSelected}"/>
-       <TextBox Text="{Binding OriginalDraftText, Mode=TwoWay}" TextWrapping="Wrap" AcceptsReturn="True" MinHeight="65" MaxHeight="140" IsVisible="{Binding !IsMultiOriginalSelected}"/>
-
-       <TextBlock Text="TIPOGRAFÍA ORIGINAL" Classes="caption"/>
-       <Border Background="#24262B" Padding="9" CornerRadius="3"><TextBlock Text="{Binding OriginalFontLabel}"/></Border>
-
-       <TextBlock Text="TAMAÑO · pt" Classes="caption"/>
-       <NumericUpDown IsEnabled="{Binding SelectedOriginal.CanChangeFontSize}" ToolTip.Tip="El tamaño se bloquea si puede afectar a texto que hereda la fuente." Value="{Binding OriginalDraftSize, Mode=TwoWay}" Minimum="4" Maximum="144" FormatString="0.##"/>
-
-       <StackPanel Orientation="Horizontal" Spacing="12">
-        <CheckBox Content="Negrita" IsChecked="{Binding OriginalDraftBold, Mode=TwoWay}"/>
-        <CheckBox Content="Cursiva" IsChecked="{Binding OriginalDraftItalic, Mode=TwoWay}"/>
-       </StackPanel>
-
-       <TextBlock Text="COLOR · #RRGGBB" Classes="caption"/>
-       <TextBox Text="{Binding OriginalDraftColor, Mode=TwoWay}"/>
-
-       <TextBlock Text="{Binding OriginalGeometryLabel}" Foreground="#7BD0FF" FontSize="11" TextWrapping="Wrap"/>
-       <Button Content="Aplicar al texto original" Command="{Binding ApplyOriginalCommand}" Classes="primary" HorizontalAlignment="Stretch"/>
-       <Button Content="Eliminar texto original" Command="{Binding DeleteOriginalCommand}" HorizontalAlignment="Stretch"/>
-       <TextBlock Text="Alineación, reflujo y ordenamiento de filas. Respeta la posición y línea base con respecto a las demás filas." Classes="caption" TextWrapping="Wrap"/>
-      </StackPanel>
      </StackPanel></Border>
      <Border Classes="section"><StackPanel Spacing="8"><TextBlock Text="CONTENIDO AÑADIDO" Classes="caption"/>
       <ListBox ItemsSource="{Binding PageObjects}" SelectedItem="{Binding SelectedGraphic, Mode=TwoWay}" MaxHeight="110" IsEnabled="{Binding !Busy}"><ListBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Label}" FontSize="12"/></DataTemplate></ListBox.ItemTemplate></ListBox>
@@ -253,11 +287,22 @@
     </StackPanel></ScrollViewer>
    </Grid>
   </Grid>
-  <Grid Grid.Row="4" ColumnDefinitions="Auto,Auto,*,Auto" Background="#0D0E11">
-   <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="6,0"><Button Content="‹" Click="PreviousClick" Padding="8,2"/><TextBlock Text="{Binding PageLabel}" FontSize="11" VerticalAlignment="Center"/><Button Content="›" Click="NextClick" Padding="8,2"/></StackPanel>
-   <Border Grid.Column="1" Width="1" Background="#464555" Margin="6"/>
-   <TextBlock Grid.Column="2" Text="{Binding Status}" FontSize="11" Foreground="#918FA1" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="8,0"/>
-   <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0"><Button Content="−" Click="ZoomOutClick" Padding="8,2"/><TextBlock Text="{Binding Zoom, StringFormat='{}{0:0}%'}" FontSize="11" VerticalAlignment="Center" Margin="6,0"/><Button Content="+" Click="ZoomInClick" Padding="8,2"/><Button Content="⛶" Click="FitPageClick" ToolTip.Tip="Ajustar página completa" Padding="6,2"/><Button Content="100%" Click="ResetZoomClick" Padding="6,2"/></StackPanel>
+  <Grid Grid.Row="4" ColumnDefinitions="Auto,Auto,*,Auto,Auto" Background="{DynamicResource StudioChrome}">
+   <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="6,0">
+    <Button Click="TogglePagesPanel" ToolTip.Tip="Mostrar u ocultar páginas" AutomationProperties.Name="Mostrar u ocultar páginas" Padding="5,2"><controls:StudioIcon Kind="panels" Width="16" Height="16"/></Button>
+    <Button Content="‹" Click="PreviousClick" Padding="6,2"/><TextBlock Text="{Binding PageLabel}" FontSize="11" VerticalAlignment="Center"/><Button Content="›" Click="NextClick" Padding="6,2"/>
+   </StackPanel>
+   <TextBlock Grid.Column="1" x:Name="StudioGeometry" Classes="mono" VerticalAlignment="Center" Margin="8,0"/>
+   <TextBlock Grid.Column="2" Text="{Binding Status}" FontSize="11" Foreground="{DynamicResource StudioMuted}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="8,0"/>
+   <TextBlock Grid.Column="3" x:Name="CursorPosition" Text="X: —   Y: — pt" Classes="mono" VerticalAlignment="Center" Margin="8,0"/>
+   <StackPanel Grid.Column="4" Orientation="Horizontal" VerticalAlignment="Center" Margin="6,0">
+    <Button Click="ZoomOutClick" ToolTip.Tip="Alejar" AutomationProperties.Name="Alejar" Padding="5,2"><controls:StudioIcon Kind="minus" Width="14" Height="14"/></Button>
+    <TextBlock Text="{Binding Zoom, StringFormat='{}{0:0}%'}" FontSize="11" VerticalAlignment="Center" Margin="6,0"/>
+    <Button Click="ZoomInClick" ToolTip.Tip="Acercar" AutomationProperties.Name="Acercar" Padding="5,2"><controls:StudioIcon Kind="plus" Width="14" Height="14"/></Button>
+    <Button Click="FitPageClick" ToolTip.Tip="Ajustar página" AutomationProperties.Name="Ajustar página" Padding="5,2"><controls:StudioIcon Kind="fit" Width="16" Height="16"/></Button>
+    <Button Click="ResetZoomClick" Content="100%" ToolTip.Tip="Restablecer zoom" Padding="5,2"/>
+    <Button Click="ToggleInspectorPanel" ToolTip.Tip="Mostrar u ocultar propiedades" AutomationProperties.Name="Mostrar u ocultar propiedades" Padding="5,2"><controls:StudioIcon Kind="properties" Width="16" Height="16"/></Button>
+   </StackPanel>
   </Grid>
  </Grid>
 </Window>

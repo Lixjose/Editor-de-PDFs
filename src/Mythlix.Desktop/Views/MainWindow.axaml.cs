@@ -13,12 +13,21 @@ public partial class MainWindow : Window {
  bool autoFit=true;
  public MainWindow() {
   InitializeComponent(); DataContext=vm; Closing += OnClosing;
+  UpdateStudioAlignment();
+  StudioWorkspace.ColumnDefinitions[0].MinWidth=220;StudioWorkspace.ColumnDefinitions[0].MaxWidth=360;
+  StudioWorkspace.ColumnDefinitions[4].MinWidth=280;StudioWorkspace.ColumnDefinitions[4].MaxWidth=440;
   Viewport.AddHandler(PointerWheelChangedEvent, OnViewportWheel, RoutingStrategies.Tunnel, handledEventsToo: true);
   PdfCanvas.TextDoubleClicked += OnTextDoubleClicked;
+  PdfCanvas.AddHandler(PointerMovedEvent,TrackStudioPointer,RoutingStrategies.Bubble,handledEventsToo:true);
+  PdfCanvas.PointerExited+=(_,_)=>CursorPosition.Text="X: —   Y: — pt";
   DirectEditor.TextChanged += (_,_) => { if(DirectEditor.IsVisible) GrowEditorToText(); };
   PdfCanvas.GraphicTextDoubleClicked += OnGraphicTextDoubleClicked;
   PdfCanvas.CanvasPointerPressed += OnCanvasPointerPressed;
   vm.PropertyChanged+=(_,e)=>{
+   if(e.PropertyName==nameof(vm.SelectedOriginal) && vm.SelectedOriginal is not null)SetStudioTool(true);
+   if(e.PropertyName==nameof(vm.SelectedGraphic) && vm.SelectedGraphic is not null)SetStudioTool(false);
+   if(e.PropertyName==nameof(vm.OriginalDraftAlignmentIndex))UpdateStudioAlignment();
+   if(e.PropertyName is nameof(vm.Geometry) or nameof(vm.Selected))UpdateStudioGeometry();
    if(e.PropertyName is nameof(vm.CurrentPage) or nameof(vm.PageImage) or nameof(vm.Selected)) {
     DirectEditor.IsVisible = false;
     vm.ActiveEditingOriginal = null;
@@ -31,6 +40,11 @@ public partial class MainWindow : Window {
    var path=args.FirstOrDefault(a=>a.EndsWith(".pdf",StringComparison.OrdinalIgnoreCase));
    if(path is null) return;
    await Execute(async()=>{await vm.OpenAsync(path);await vm.RenderAsync();});
+   if(args.Contains("--studio-ui-smoke")) {
+    try {await CheckStudioUiAsync();Console.WriteLine("MYTHLIX_STUDIO_UI_SMOKE_OK");}
+    catch(Exception ex) {Console.WriteLine("MYTHLIX_STUDIO_UI_SMOKE_FAILED: "+ex);Environment.ExitCode=1;}
+    closing=true;vm.Dispose();Close();return;
+   }
    if(args.Contains("--composition-reopen-smoke")) {
     try {await Diagnostics.CompositionPreviewSmokeTest.RunAsync(vm,this,true,true);Console.WriteLine("MYTHLIX_COMPOSITION_REOPEN_SMOKE_OK");}
     catch(Exception ex) {Console.WriteLine("MYTHLIX_COMPOSITION_REOPEN_SMOKE_FAILED: "+ex);Environment.ExitCode=1;}
@@ -145,8 +159,8 @@ public partial class MainWindow : Window {
  }
  async void TabChanged(object? s,SelectionChangedEventArgs e)=>await Execute(vm.RenderAsync);
  async void ThumbnailChanged(object? s,SelectionChangedEventArgs e) {if(ThumbnailList.SelectedItem is PageThumbnailViewModel page)await Execute(async()=>{vm.CurrentPage=page.Number;await vm.RenderAsync();});}
- void SelectModeClick(object? s,RoutedEventArgs e){vm.SelectedGraphic=null;vm.SelectedOriginal=null;vm.Status="Seleccione un objeto o bloque de texto en la página.";}
- void OriginalModeClick(object? s,RoutedEventArgs e){vm.SelectedOriginal=vm.OriginalBlocks.FirstOrDefault();vm.Status=vm.OriginalStatus;}
+ void SelectModeClick(object? s,RoutedEventArgs e){SetStudioTool(false);vm.SelectedGraphic=null;vm.SelectedOriginal=null;vm.Status="Seleccione un objeto o bloque de texto en la página.";}
+ void OriginalModeClick(object? s,RoutedEventArgs e){SetStudioTool(true);vm.SelectedOriginal=vm.OriginalBlocks.FirstOrDefault();vm.Status=vm.OriginalStatus;}
  async void PreviousClick(object? s,RoutedEventArgs e)=>await Execute(async()=>{vm.CurrentPage--;await vm.RenderAsync();});
  async void NextClick(object? s,RoutedEventArgs e)=>await Execute(async()=>{vm.CurrentPage++;await vm.RenderAsync();});
  async void DuplicatePageClick(object? s,RoutedEventArgs e)=>await Execute(()=>vm.EditAsync("duplicate"));
@@ -333,7 +347,7 @@ public partial class MainWindow : Window {
  void FitPageClick(object? s,RoutedEventArgs e){autoFit=true;FitPageToView();}
  void FitPageToView(){
   if(vm.Selected is null || Viewport.Bounds.Width<=70 || Viewport.Bounds.Height<=82)return;
-  var targetZoom = Math.Clamp(Math.Min((Viewport.Bounds.Width-68)/720,(Viewport.Bounds.Height-80)/(720*vm.Geometry.DisplayHeight/vm.Geometry.DisplayWidth))*100,25,300);
+  var targetZoom = Math.Clamp(Math.Min((Viewport.Bounds.Width-80)/720,(Viewport.Bounds.Height-80)/(720*vm.Geometry.DisplayHeight/vm.Geometry.DisplayWidth))*100,25,300);
   if(Math.Abs(targetZoom - vm.Zoom) >= 2.0) {
    vm.Zoom = targetZoom;
   }

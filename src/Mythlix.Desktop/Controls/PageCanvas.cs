@@ -69,7 +69,7 @@ public sealed class PageCanvas : Control {
   if(vm.SelectedOriginal is {} original && original != vm.ActiveEditingOriginal) {
    var factor=Bounds.Width/vm.Geometry.DisplayWidth;var box=vm.Geometry.ToDisplay(original.Bounds);
    var rect=new Rect(box.X*factor,box.Y*factor,box.Width*factor,box.Height*factor);
-   context.DrawRectangle(new SolidColorBrush(Color.Parse("#194F46E5")),new Pen(Brush.Parse("#C3C0FF"),1.5),rect);return;
+   context.DrawRectangle(new SolidColorBrush(Color.Parse("#194F46E5")),new Pen(Brush.Parse("#4F46E5"),1.2),rect);return;
   }
   if(vm.SelectedGraphic is not {} selected || !vm.Geometry.CanEdit)return;
   var scale=Bounds.Width/vm.Geometry.DisplayWidth;

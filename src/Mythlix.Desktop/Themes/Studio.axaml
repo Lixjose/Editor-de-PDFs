@@ -1,0 +1,23 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+ <ResourceDictionary.ThemeDictionaries>
+  <ResourceDictionary x:Key="Dark">
+   <SolidColorBrush x:Key="StudioBase">#121316</SolidColorBrush><SolidColorBrush x:Key="StudioChrome">#0D0E11</SolidColorBrush>
+   <SolidColorBrush x:Key="StudioPanel">#1A1B1E</SolidColorBrush><SolidColorBrush x:Key="StudioRaised">#24262B</SolidColorBrush>
+   <SolidColorBrush x:Key="StudioInset">#16171A</SolidColorBrush><SolidColorBrush x:Key="StudioHover">#2E3138</SolidColorBrush>
+   <SolidColorBrush x:Key="StudioBorder">#343740</SolidColorBrush><SolidColorBrush x:Key="StudioText">#F1F5F9</SolidColorBrush>
+   <SolidColorBrush x:Key="StudioMuted">#9AA7B9</SolidColorBrush><SolidColorBrush x:Key="StudioCyan">#7BD0FF</SolidColorBrush>
+   <SolidColorBrush x:Key="StudioSelected">#304F46E5</SolidColorBrush><SolidColorBrush x:Key="StudioStage">#101114</SolidColorBrush>
+   <SolidColorBrush x:Key="StudioDot">#30343C</SolidColorBrush>
+  </ResourceDictionary>
+  <ResourceDictionary x:Key="Light">
+   <SolidColorBrush x:Key="StudioBase">#F0F3F8</SolidColorBrush><SolidColorBrush x:Key="StudioChrome">#FFFFFF</SolidColorBrush>
+   <SolidColorBrush x:Key="StudioPanel">#F8FAFD</SolidColorBrush><SolidColorBrush x:Key="StudioRaised">#EDF1F7</SolidColorBrush>
+   <SolidColorBrush x:Key="StudioInset">#FFFFFF</SolidColorBrush><SolidColorBrush x:Key="StudioHover">#E5EAF3</SolidColorBrush>
+   <SolidColorBrush x:Key="StudioBorder">#D5DEEB</SolidColorBrush><SolidColorBrush x:Key="StudioText">#17243A</SolidColorBrush>
+   <SolidColorBrush x:Key="StudioMuted">#596E89</SolidColorBrush><SolidColorBrush x:Key="StudioCyan">#036F9B</SolidColorBrush>
+   <SolidColorBrush x:Key="StudioSelected">#E6E5FF</SolidColorBrush><SolidColorBrush x:Key="StudioStage">#E7ECF4</SolidColorBrush>
+   <SolidColorBrush x:Key="StudioDot">#C6D1E0</SolidColorBrush>
+  </ResourceDictionary>
+ </ResourceDictionary.ThemeDictionaries>
+ <SolidColorBrush x:Key="StudioAccent">#4F46E5</SolidColorBrush>
+</ResourceDictionary>
